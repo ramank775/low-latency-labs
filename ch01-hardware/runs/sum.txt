@@ -1,0 +1,15 @@
+$ ./target/release/sum --core 1
+# load average: 4.09 3.83 3.16 (2 vCPUs, shared with other builds)
+Predict first (the chapter's prediction): a floating-point add takes 3-4 cycles and the core can start two per cycle. sum1 is one chain: for 4,096 values about 16,000 cycles, roughly 4 us at 4 GHz. sum4 is four chains that interleave, about one add per cycle: roughly 1 us, four times faster.
+Write your own number and its reason down now, then read on.
+machine: Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0,1; TSC 2.800 ticks/ns (times are TSC nanoseconds, not core cycles); transparent huge pages: madvise
+pinned: core 1
+4,096 f64 values in 0..1 (seed 7), 32 KB; 100,000 timed calls per function after 1,000 warm-up calls
+
+ function   time per call (ns)                          time per add (ns)    result
+            p50       p99     p99.9       max      n       p50
+ sum1          4835      9912     84966   7779006 100000       1.181       2030.92291868627717122
+ sum4          1229      2149     32183   4120936 100000       0.300       2030.92291868627603435
+
+sum1 / sum4: 3.94x at the p50 (the chapter: about 4x). The two results may differ in the last bits: floating-point addition is not associative, so the compiler will not split the chain for you.
+

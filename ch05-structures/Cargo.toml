@@ -1,0 +1,15 @@
+[package]
+name = "ch05-structures"
+version = "0.1.0"
+description = "The data-structures chapter: SPSC ring, 32-byte Update, bitmaps, pool, counting allocator"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# The arena of 5.3; off the measured path.
+bumpalo = "3"
+# The lab's fixed-memory histograms: every byte allocated before the run.
+hdrhistogram = { version = "7", default-features = false }
+# sched_setaffinity for --core and --cores.
+libc = "0.2"

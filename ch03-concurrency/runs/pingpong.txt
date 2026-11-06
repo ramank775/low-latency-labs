@@ -1,0 +1,92 @@
+$ ./target/release/pingpong --cores 0,1
+Predict first. The chapter's prediction:
+  Each round trip moves the line twice, once each way.
+  Two siblings: tens of ns a round trip, the store buffer and the pipeline, not a transfer.
+  Two cores sharing an L3: on a client part's ring or one AMD core complex 25-40 ns a hop,
+    50-80 ns a round trip; on a server part's mesh 50-80 ns a hop, 100-160 ns a round trip.
+  Two L3s on one socket: 80-120 ns a hop, 160-240 ns a round trip.
+  Two sockets: 120-250 ns a hop, 250-500 ns a round trip.
+  On a quiet pinned box the p99 within 10-20% of the p50, and a max showing the 1-5 us
+  of a timer tick unless the cores are isolated. The matrix comes out in blocks.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+clock: 2.800 ticks per ns; clock pair p50 13 ns, inside every sample, not subtracted
+spin: spin_loop() (pause) in both spins
+
+Lab 3.3, ping-pong, cores 0 and 1: two physical cores sharing one L3
+  A pinned to core 0 (ran on CPU 0), B pinned to core 1 (ran on CPU 1)
+  round trip: n 1000000 p50 169 p99 580 p99.9 3839 max 12099583 ns
+  one hop, p50 / 2: 84 ns; p99 is 243% above p50
+
+$ ./target/release/pingpong --cores 0,1 --no-pause
+Predict first. The chapter's prediction:
+  Each round trip moves the line twice, once each way.
+  Two siblings: tens of ns a round trip, the store buffer and the pipeline, not a transfer.
+  Two cores sharing an L3: on a client part's ring or one AMD core complex 25-40 ns a hop,
+    50-80 ns a round trip; on a server part's mesh 50-80 ns a hop, 100-160 ns a round trip.
+  Two L3s on one socket: 80-120 ns a hop, 160-240 ns a round trip.
+  Two sockets: 120-250 ns a hop, 250-500 ns a round trip.
+  On a quiet pinned box the p99 within 10-20% of the p50, and a max showing the 1-5 us
+  of a timer tick unless the cores are isolated. The matrix comes out in blocks.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+clock: 2.800 ticks per ns; clock pair p50 15 ns, inside every sample, not subtracted
+spin: --no-pause: bare spins
+
+Lab 3.3, ping-pong, cores 0 and 1: two physical cores sharing one L3
+  A pinned to core 0 (ran on CPU 0), B pinned to core 1 (ran on CPU 1)
+  round trip: n 1000000 p50 192 p99 231 p99.9 2917 max 15990783 ns
+  one hop, p50 / 2: 96 ns; p99 is 20% above p50
+
+$ ./target/release/pingpong --placements --iters 200_000
+Predict first. The chapter's prediction:
+  Each round trip moves the line twice, once each way.
+  Two siblings: tens of ns a round trip, the store buffer and the pipeline, not a transfer.
+  Two cores sharing an L3: on a client part's ring or one AMD core complex 25-40 ns a hop,
+    50-80 ns a round trip; on a server part's mesh 50-80 ns a hop, 100-160 ns a round trip.
+  Two L3s on one socket: 80-120 ns a hop, 160-240 ns a round trip.
+  Two sockets: 120-250 ns a hop, 250-500 ns a round trip.
+  On a quiet pinned box the p99 within 10-20% of the p50, and a max showing the 1-5 us
+  of a timer tick unless the cores are isolated. The matrix comes out in blocks.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+clock: 2.800 ticks per ns; clock pair p50 16 ns, inside every sample, not subtracted
+spin: spin_loop() (pause) in both spins
+
+Lab 3.3, ping-pong, hyperthread siblings: one core, one L1 and L2: no such pair among cores 0-1
+
+Lab 3.3, ping-pong, cores 0 and 1: two physical cores sharing one L3
+  A pinned to core 0 (ran on CPU 0), B pinned to core 1 (ran on CPU 1)
+  round trip: n 200000 p50 233 p99 456 p99.9 4295 max 12083199 ns
+  one hop, p50 / 2: 116 ns; p99 is 96% above p50
+
+Lab 3.3, ping-pong, two L3s on one socket: no such pair among cores 0-1
+
+Lab 3.3, ping-pong, two sockets: no such pair among cores 0-1
+
+two-socket p50 / one-L3 p50: not measurable here (needs both placements)
+
+$ ./target/release/pingpong --matrix
+Predict first. The chapter's prediction:
+  Each round trip moves the line twice, once each way.
+  Two siblings: tens of ns a round trip, the store buffer and the pipeline, not a transfer.
+  Two cores sharing an L3: on a client part's ring or one AMD core complex 25-40 ns a hop,
+    50-80 ns a round trip; on a server part's mesh 50-80 ns a hop, 100-160 ns a round trip.
+  Two L3s on one socket: 80-120 ns a hop, 160-240 ns a round trip.
+  Two sockets: 120-250 ns a hop, 250-500 ns a round trip.
+  On a quiet pinned box the p99 within 10-20% of the p50, and a max showing the 1-5 us
+  of a timer tick unless the cores are isolated. The matrix comes out in blocks.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+clock: 2.800 ticks per ns; clock pair p50 14 ns, inside every sample, not subtracted
+spin: spin_loop() (pause) in both spins
+
+Lab 3.3, ping-pong matrix: p50 round trip in ns, 100000 timed round trips a pair
+          0     1
+    0     -   199
+    1   199     -
+

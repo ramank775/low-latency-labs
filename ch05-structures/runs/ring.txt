@@ -1,0 +1,43 @@
+Predict first (the chapter's prediction; write yours down before reading on):
+  the ring at 5-20 ns an item; mpsc at 100-300 ns with the consumer spinning on try_recv;
+  the mutex at 150-400 ns: each 15-25 times the ring, and within a factor of two of the other.
+  Paced at one item a microsecond, latency is the hand-off itself; flat out against a full
+  ring it is only queueing: about 4,096 items' worth of the consumer's time.
+
+Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0-1; clocksource tsc
+TSC 2.800 GHz; two rdtsc reads back to back: p50 47 ticks, 16.8 ns, subtracted below
+flat out: 4,000,000 items a queue; paced: 200,000 items, one every 1000 ns
+
+spsc ring, padded
+  producer: NOT pinned: core 2 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  consumer: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  throughput, flat out: 2.0 M items/s
+    per item, by block of 4096: p50    24.0 p99    2936 p99.9    4888 max      4888 ns  (n 966)
+  latency, paced one per 1000 ns, push to pop, minus the clock pair:
+    p50 4009966 p99 8032238 p99.9 8044526 max  13934574 ns  (n 198,000)
+  latency, flat out with stamps (the queue full): queueing, not the hand-off:
+    p50 4050926 p99 8015854 p99.9 10002414 max  16056302 ns  (n 3,960,000)
+
+mpsc::channel()
+  producer: NOT pinned: core 2 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  consumer: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  throughput, flat out: 8.7 M items/s
+    per item, by block of 4096: p50    30.2 p99    1545 p99.9    1689 max      1689 ns  (n 966)
+  latency, paced one per 1000 ns, push to pop, minus the clock pair:
+    p50 3985390 p99 4055022 p99.9 4063214 max   8073198 ns  (n 198,000)
+  latency, flat out with stamps (the queue full): queueing, not the hand-off:
+    p50 5201902 p99 9994222 p99.9 10117102 max  10190830 ns  (n 3,960,000)
+
+Mutex<VecDeque<u64>>
+  producer: NOT pinned: core 2 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  consumer: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  throughput, flat out: 0.5 M items/s
+    per item, by block of 4096: p50    1954 p99    2986 p99.9    4172 max      4172 ns  (n 966)
+  latency, paced one per 1000 ns, push to pop, minus the clock pair:
+    p50 4024302 p99 8036334 p99.9 8052718 max  13787118 ns  (n 198,000)
+  latency, flat out with stamps (the queue full): queueing, not the hand-off:
+    p50 4042734 p99 8056814 p99.9 8126446 max  16130030 ns  (n 3,960,000)
+
+against the ring (p50 to p50; the chapter predicts 15-25x):
+  mpsc::channel()          throughput per item   1.26x   paced latency   0.99x
+  Mutex<VecDeque<u64>>     throughput per item   81.3x   paced latency   1.00x

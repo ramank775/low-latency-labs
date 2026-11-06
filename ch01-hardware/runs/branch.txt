@@ -1,0 +1,21 @@
+$ ./target/release/branch --core 1
+# load average: 2.97 3.44 2.72 (2 vCPUs, shared with other builds)
+Predict first (the chapter's prediction): on random bytes the condition is true for 127 of 256 values, close to a coin flip: about 50 million mispredicts per 100 MB pass at roughly 17 cycles, about 0.2 s at 4 GHz, plus about 25 ms of basic work. Sorted: the predictor fails only at the boundary, 25-50 ms. Branchless never mispredicts: 25-50 ms, or less if vectorised. So unsorted-branchy 4-8x slower than either, about 50 million branch misses against near zero, IPC 0.5-1 against 2 or more.
+Write your own number and its reason down now, then read on.
+machine: Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0,1; TSC 2.800 ticks/ns (times are TSC nanoseconds, not core cycles); transparent huge pages: madvise
+pinned: core 1
+data: 100 MB of uniform random bytes (seed 7), 49.62% above 128; 11 timed passes per variant after one warm-up
+
+ variant     what                            time per pass (ms)          time per byte (ns)        sum
+                                             p50      p99      max       p50     p99     max     n
+ unsorted    branchy, unsorted data           538.21   576.85   576.85     5.133   5.501   5.501    11   9,989,048,123
+ sorted      branchy, the sorted copy          69.22   106.28   106.28     0.660   1.014   1.014    11   9,989,048,123
+ branchless  cmov rewrite, unsorted data       86.00   102.88   102.88     0.820   0.981   0.981    11   9,989,048,123
+ vector      select, vectorised by LLVM        86.59    90.68    90.68     0.826   0.865   0.865    11   9,989,048,123
+
+unsorted / sorted: 7.8x at the p50 (the chapter: 4-8x against sorted and branchless)
+unsorted / branchless: 6.3x at the p50 (the chapter: 4-8x against sorted and branchless)
+unsorted / vector: 6.2x at the p50 (the chapter: 4-8x against sorted and branchless)
+Under perf stat, one variant per run: expect about 52,428,800 branch-misses per pass for unsorted, near zero for the others; this run makes 12 passes per variant.
+Write down time, branch misses and IPC for all three. If unsorted-branchy is not clearly slower, read the assembly before concluding anything.
+

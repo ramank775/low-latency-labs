@@ -1,0 +1,225 @@
+$ ./target/release/syscalls
+syscalls: Chapter 1's stride walk over 256 MB of u64, 3 passes per stride; variant: plain (Lab 2.2)
+Predict first (the chapter's prediction, before you measure): the plain walk makes a few dozen system calls in total (the mmap for the array, a handful of writes for the output, exit) and none from inside the loop; page-faults 65,536 (256 MB over 4 KB) plus a few, all on the first pass. --log-pass adds one write per pass, trivial. --log-access adds a write every 1,000 accesses: 1 µs of work and 2-5 µs of write, so the walk runs 3-6x slower, more to a terminal than to a pipe, and a further 10-50x under strace, where the plain walk is barely affected. The allocation count does not move in any variant; with --format it rises by one per line.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+
+
+vec![0u64; 33,554,432]: 27,551 ns, 1 faults, 1 allocation (an mmap: the frames come later)
+touch, one write per element: 290.9 ms, 65,536 faults (65,536 expected: one per 4 KB page)
+stride    bytes   n     p50 ms     p99 ms     max ms    ns/access  allocs
+     1        8   3     88.359    103.065    103.065         2.63       0
+     2       16   3     63.551     65.077     65.077         3.79       0
+     4       32   3     47.916     49.383     49.383         5.71       0
+     8       64   3     46.917     47.598     47.598        11.19       0
+    16      128   3     40.625     44.403     44.403        19.37       0
+    32      256   3     23.927     24.420     24.420        22.82       0
+    64      512   3     11.858     13.165     13.165        22.62       0
+   128     1024   3      7.349      7.635      7.635        28.04       0
+   256     2048   3      1.864      2.074      2.074        14.22       0
+   512     4096   3      0.848      5.559      5.559        12.93       0
+  1024     8192   3      0.570      0.629      0.629        17.40       0
+  2048    16384   3      0.208      0.242      0.242        12.67       0
+  4096    32768   3      0.082      0.103      0.103        10.03       0
+walk: 39 passes in 990.5 ms, logging included; 0 log lines (one write(2) each)
+faults during the walk: 0 (the array was touched before it)
+allocations during the walk: 0 (println! allocates nothing; format! one per line)
+sums: all as expected
+process: 1482.3 ms from start to here
+deltas over the walk:
+  /proc/interrupts core 0: LOC +361, RES +41, 49 virtio7-input.0 +2, CAL +2, TLB +2
+  LOC delta core 0: 361 (364/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +279, TIMER +104, SCHED +23, NET_RX +2
+  steal core 0: +20 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +325, RES +20, CAL +3, TLB +3, 50 virtio7-output.0 +2
+  LOC delta core 1: 325 (328/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +467, TIMER +129, SCHED +22, NET_RX +2
+  steal core 1: +30 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +176, nr_migrations +0
+Write down: the syscall counts, the slowdown of each logging variant, and the slowdown strace adds to each.
+
+$ ./target/release/syscalls --log-pass | grep -v '^pass '
+syscalls: Chapter 1's stride walk over 256 MB of u64, 3 passes per stride; variant: --log-pass, each line by println! (Lab 2.2)
+Predict first (the chapter's prediction, before you measure): the plain walk makes a few dozen system calls in total (the mmap for the array, a handful of writes for the output, exit) and none from inside the loop; page-faults 65,536 (256 MB over 4 KB) plus a few, all on the first pass. --log-pass adds one write per pass, trivial. --log-access adds a write every 1,000 accesses: 1 µs of work and 2-5 µs of write, so the walk runs 3-6x slower, more to a terminal than to a pipe, and a further 10-50x under strace, where the plain walk is barely affected. The allocation count does not move in any variant; with --format it rises by one per line.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+
+
+vec![0u64; 33,554,432]: 30,483 ns, 1 faults, 1 allocation (an mmap: the frames come later)
+touch, one write per element: 196.7 ms, 65,536 faults (65,536 expected: one per 4 KB page)
+stride    bytes   n     p50 ms     p99 ms     max ms    ns/access  allocs
+     1        8   3     70.198     73.678     73.678         2.09       0
+     2       16   3     60.328     65.556     65.556         3.60       0
+     4       32   3     44.004     45.323     45.323         5.25       0
+     8       64   3     46.250     48.298     48.298        11.03       0
+    16      128   3     39.658     43.913     43.913        18.91       0
+    32      256   3     19.753     22.979     22.979        18.84       0
+    64      512   3      7.197     11.044     11.044        13.73       0
+   128     1024   3      3.759      7.657      7.657        14.34       0
+   256     2048   3      1.823      5.783      5.783        13.91       0
+   512     4096   3      0.953      1.239      1.239        14.55       0
+  1024     8192   3      0.456      0.502      0.502        13.91       0
+  2048    16384   3      0.212      0.230      0.230        12.96       0
+  4096    32768   3      0.093      0.096      0.096        11.39       0
+walk: 39 passes in 925.1 ms, logging included; 39 log lines (one write(2) each)
+faults during the walk: 0 (the array was touched before it)
+allocations during the walk: 0 (println! allocates nothing; format! one per line)
+sums: all as expected
+process: 1328.4 ms from start to here
+deltas over the walk:
+  /proc/interrupts core 0: LOC +299, RES +11, 49 virtio7-input.0 +6
+  LOC delta core 0: 299 (323/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +249, TIMER +58, SCHED +19, NET_RX +6
+  steal core 0: +0 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +288, RES +11, 50 virtio7-output.0 +5, 37 virtio1-req.0 +3, CAL +2, TLB +2
+  LOC delta core 1: 288 (311/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +439, TIMER +142, SCHED +21, NET_RX +5, BLOCK +3
+  steal core 1: +10 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +171, nr_migrations +0
+Write down: the syscall counts, the slowdown of each logging variant, and the slowdown strace adds to each.
+
+$ ./target/release/syscalls --log-access | grep -v '^access '
+syscalls: Chapter 1's stride walk over 256 MB of u64, 3 passes per stride; variant: --log-access, each line by println! (Lab 2.2)
+Predict first (the chapter's prediction, before you measure): the plain walk makes a few dozen system calls in total (the mmap for the array, a handful of writes for the output, exit) and none from inside the loop; page-faults 65,536 (256 MB over 4 KB) plus a few, all on the first pass. --log-pass adds one write per pass, trivial. --log-access adds a write every 1,000 accesses: 1 µs of work and 2-5 µs of write, so the walk runs 3-6x slower, more to a terminal than to a pipe, and a further 10-50x under strace, where the plain walk is barely affected. The allocation count does not move in any variant; with --format it rises by one per line.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+
+
+vec![0u64; 33,554,432]: 17,977 ns, 1 faults, 1 allocation (an mmap: the frames come later)
+touch, one write per element: 180.9 ms, 65,536 faults (65,536 expected: one per 4 KB page)
+stride    bytes   n     p50 ms     p99 ms     max ms    ns/access  allocs
+     1        8   3    216.329    224.271    224.271         6.45       0
+     2       16   3    101.667    113.753    113.753         6.06       0
+     4       32   3     91.201    124.427    124.427        10.87       0
+     8       64   3     62.922     81.125     81.125        15.00       0
+    16      128   3     57.082     64.071     64.071        27.22       0
+    32      256   3     26.500     28.488     28.488        25.27       0
+    64      512   3     12.614     15.314     15.314        24.06       0
+   128     1024   3      9.497     12.185     12.185        36.23       0
+   256     2048   3      4.866      6.513      6.513        37.12       0
+   512     4096   3      1.095      1.295      1.295        16.70       0
+  1024     8192   3      0.441      0.442      0.442        13.45       0
+  2048    16384   3      0.499      4.013      4.013        30.48       0
+  4096    32768   3      0.122      0.155      0.155        14.83       0
+walk: 39 passes in 1802.0 ms, logging included; 201,288 log lines (one write(2) each)
+faults during the walk: 0 (the array was touched before it)
+allocations during the walk: 0 (println! allocates nothing; format! one per line)
+sums: all as expected
+process: 2183.9 ms from start to here
+deltas over the walk:
+  /proc/interrupts core 0: LOC +531, RES +33, 49 virtio7-input.0 +3, CAL +2, TLB +2
+  LOC delta core 0: 531 (295/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +423, TIMER +117, SCHED +34, NET_RX +3
+  steal core 0: +20 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +506, 50 virtio7-output.0 +3, 32 virtio0-stats +1, RES +1
+  LOC delta core 1: 506 (281/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +704, TIMER +194, SCHED +34, NET_RX +2
+  steal core 1: +50 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +21, nonvoluntary_ctxt_switches +130058, nr_migrations +0
+Write down: the syscall counts, the slowdown of each logging variant, and the slowdown strace adds to each.
+
+$ ./target/release/syscalls --log-access --format | grep -v '^access '
+syscalls: Chapter 1's stride walk over 256 MB of u64, 3 passes per stride; variant: --log-access, each line by format! + write_all (Lab 2.2)
+Predict first (the chapter's prediction, before you measure): the plain walk makes a few dozen system calls in total (the mmap for the array, a handful of writes for the output, exit) and none from inside the loop; page-faults 65,536 (256 MB over 4 KB) plus a few, all on the first pass. --log-pass adds one write per pass, trivial. --log-access adds a write every 1,000 accesses: 1 µs of work and 2-5 µs of write, so the walk runs 3-6x slower, more to a terminal than to a pipe, and a further 10-50x under strace, where the plain walk is barely affected. The allocation count does not move in any variant; with --format it rises by one per line.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+
+
+vec![0u64; 33,554,432]: 39,695 ns, 1 faults, 1 allocation (an mmap: the frames come later)
+touch, one write per element: 227.7 ms, 65,536 faults (65,536 expected: one per 4 KB page)
+stride    bytes   n     p50 ms     p99 ms     max ms    ns/access  allocs
+     1        8   3    215.497    224.330    224.330         6.42  100662
+     2       16   3    147.250    158.908    158.908         8.78   50331
+     4       32   3    121.043    131.239    131.239        14.43   25164
+     8       64   3     83.531    107.497    107.497        19.92   12582
+    16      128   3     65.952     66.186     66.186        31.45    6291
+    32      256   3     27.309     29.077     29.077        26.04    3144
+    64      512   3     12.973     15.515     15.515        24.74    1572
+   128     1024   3      7.904      9.616      9.616        30.15     786
+   256     2048   3      2.313      4.384      4.384        17.65     393
+   512     4096   3      1.306      5.054      5.054        19.92     195
+  1024     8192   3      0.591      0.724      0.724        18.02      96
+  2048    16384   3      0.262      0.283      0.283        15.97      48
+  4096    32768   3      0.108      0.118      0.118        13.22      24
+walk: 39 passes in 2082.9 ms, logging included; 201,288 log lines (one write(2) each)
+faults during the walk: 0 (the array was touched before it)
+allocations during the walk: 201288 (println! allocates nothing; format! one per line)
+sums: all as expected
+process: 2514.4 ms from start to here
+deltas over the walk:
+  /proc/interrupts core 0: LOC +620, RES +12, 49 virtio7-input.0 +3, CAL +1, TLB +1
+  LOC delta core 0: 620 (298/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +511, TIMER +101, SCHED +39, NET_RX +3
+  steal core 0: +60 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +639, RES +8, 50 virtio7-output.0 +3, 37 virtio1-req.0 +1
+  LOC delta core 1: 639 (307/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +596, TIMER +239, SCHED +42, NET_RX +2, BLOCK +1
+  steal core 1: +10 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +22, nonvoluntary_ctxt_switches +128015, nr_migrations +0
+Write down: the syscall counts, the slowdown of each logging variant, and the slowdown strace adds to each.
+
+$ ./target/release/syscalls --log-access --buffered | grep -v '^access '
+syscalls: Chapter 1's stride walk over 256 MB of u64, 3 passes per stride; variant: --log-access, each line by writeln! into a BufWriter (Lab 2.2)
+Predict first (the chapter's prediction, before you measure): the plain walk makes a few dozen system calls in total (the mmap for the array, a handful of writes for the output, exit) and none from inside the loop; page-faults 65,536 (256 MB over 4 KB) plus a few, all on the first pass. --log-pass adds one write per pass, trivial. --log-access adds a write every 1,000 accesses: 1 µs of work and 2-5 µs of write, so the walk runs 3-6x slower, more to a terminal than to a pipe, and a further 10-50x under strace, where the plain walk is barely affected. The allocation count does not move in any variant; with --format it rises by one per line.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+
+
+vec![0u64; 33,554,432]: 19,813 ns, 1 faults, 1 allocation (an mmap: the frames come later)
+touch, one write per element: 201.9 ms, 65,536 faults (65,536 expected: one per 4 KB page)
+stride    bytes   n     p50 ms     p99 ms     max ms    ns/access  allocs
+     1        8   3     87.847     94.056     94.056         2.62       0
+     2       16   3     70.664     77.296     77.296         4.21       0
+     4       32   3     60.211     60.568     60.568         7.18       0
+     8       64   3     59.448     69.409     69.409        14.17       0
+    16      128   3     62.275     64.149     64.149        29.69       0
+    32      256   3     26.686     28.243     28.243        25.45       0
+    64      512   3     14.325     20.735     20.735        27.32       0
+   128     1024   3      9.239     10.018     10.018        35.24       0
+   256     2048   3      2.447      6.297      6.297        18.67       0
+   512     4096   3      1.228      1.382      1.382        18.73       0
+  1024     8192   3      0.540      0.585      0.585        16.49       0
+  2048    16384   3      0.243      0.266      0.266        14.85       0
+  4096    32768   3      0.098      0.107      0.107        11.95       0
+walk: 39 passes in 1184.7 ms, logging included; 201,288 log lines (a few large writes, from the BufWriter)
+faults during the walk: 12 (the array was touched before it; the BufWriter's buffer faults in as it first fills)
+allocations during the walk: 0 (println! allocates nothing; format! one per line)
+sums: all as expected
+process: 1587.5 ms from start to here
+deltas over the walk:
+  /proc/interrupts core 0: LOC +367, RES +11, 49 virtio7-input.0 +1
+  LOC delta core 0: 367 (310/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +296, TIMER +53, SCHED +23, NET_RX +1
+  steal core 0: +30 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +352, RES +11, 32 virtio0-stats +1, 50 virtio7-output.0 +1
+  LOC delta core 1: 352 (297/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +437, TIMER +160, SCHED +23, NET_RX +1
+  steal core 1: +20 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +2, nonvoluntary_ctxt_switches +416, nr_migrations +0
+Write down: the syscall counts, the slowdown of each logging variant, and the slowdown strace adds to each.
+

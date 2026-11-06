@@ -1,0 +1,11 @@
+[package]
+name = "ch02-os"
+version = "0.1.0"
+description = "The platform chapter: jitter, system calls, first touch and wake latency, measured"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+hdrhistogram = { version = "7", default-features = false }
+libc = "0.2"

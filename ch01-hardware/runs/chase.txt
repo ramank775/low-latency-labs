@@ -1,0 +1,60 @@
+$ ./target/release/chase --core 1
+# load average: 3.68 3.76 3.09 (2 vCPUs, shared with other builds)
+Predict first (the chapter's prediction): the Vec is 80 MB read in order, bound by bandwidth: about 5-10 ms, under 1 ns per element. The list is a chain of dependent loads to random addresses, each a DRAM miss plus usually a TLB miss: 100-150 ns per node, 1-1.5 s in total, 100-300x the Vec. Vec<Box<u64>> (section 1.4) in between: 10-40x the Vec. Without the shuffle the list looks only a few times slower.
+Write your own number and its reason down now, then read on.
+machine: Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0,1; TSC 2.800 ticks/ns (times are TSC nanoseconds, not core cycles); transparent huge pages: madvise
+pinned: core 1
+10,000,000 nodes, links shuffled into random order; seed 7; Vec<u64> pages: 4 KB; malloc'd nodes: GLIBC_TUNABLES unset
+5 timed traversals per variant after one warm-up
+
+ variant  what                             time per traversal (ms)          time per element (ns)     AnonHuge kB,
+                                           p50       p99       max         p50     p99     max     n  process
+ vec      Vec<u64>, in order                12.445    12.948    12.948        1.24    1.29    1.29     5        0
+ list     linked list, one Box per node   3346.590  3458.950  3458.950      334.66  345.89  345.89     5        0
+ boxes    Vec<Box<u64>>                    250.761   285.263   285.263       25.08   28.53   28.53     5        0
+
+list / vec: 269x at the p50 (the chapter: 100-300x)
+boxes / vec: 20x at the p50 (the chapter: 10-40x)
+The list's time per node is the most honest memory-latency figure user code gets: compare it with the ladder in section 1.2 and the Lab 1.1 plateau.
+Write down time per element for both, with and without huge pages.
+
+$ ./target/release/chase --core 1 --no-shuffle
+# load average: 3.69 3.75 3.11 (2 vCPUs, shared with other builds)
+Predict first (the chapter's prediction): the Vec is 80 MB read in order, bound by bandwidth: about 5-10 ms, under 1 ns per element. The list is a chain of dependent loads to random addresses, each a DRAM miss plus usually a TLB miss: 100-150 ns per node, 1-1.5 s in total, 100-300x the Vec. Vec<Box<u64>> (section 1.4) in between: 10-40x the Vec. Without the shuffle the list looks only a few times slower.
+Write your own number and its reason down now, then read on.
+machine: Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0,1; TSC 2.800 ticks/ns (times are TSC nanoseconds, not core cycles); transparent huge pages: madvise
+pinned: core 1
+10,000,000 nodes, links in allocation order (--no-shuffle); seed 7; Vec<u64> pages: 4 KB; malloc'd nodes: GLIBC_TUNABLES unset
+5 timed traversals per variant after one warm-up
+
+ variant  what                             time per traversal (ms)          time per element (ns)     AnonHuge kB,
+                                           p50       p99       max         p50     p99     max     n  process
+ vec      Vec<u64>, in order                12.652    16.816    16.816        1.27    1.68    1.68     5        0
+ list     linked list, one Box per node     74.501    83.418    83.418        7.45    8.34    8.34     5        0
+ boxes    Vec<Box<u64>>                     49.742    86.704    86.704        4.97    8.67    8.67     5        0
+
+list / vec: 6x at the p50 (the chapter: only a few times, without the shuffle)
+boxes / vec: 4x at the p50 (the chapter: only a few times, without the shuffle)
+The list's time per node is the most honest memory-latency figure user code gets: compare it with the ladder in section 1.2 and the Lab 1.1 plateau.
+Write down time per element for both, with and without huge pages.
+
+$ env GLIBC_TUNABLES=glibc.malloc.hugetlb=1 ./target/release/chase --core 1 --huge
+# load average: 3.69 3.75 3.11 (2 vCPUs, shared with other builds)
+Predict first (the chapter's prediction): the Vec is 80 MB read in order, bound by bandwidth: about 5-10 ms, under 1 ns per element. The list is a chain of dependent loads to random addresses, each a DRAM miss plus usually a TLB miss: 100-150 ns per node, 1-1.5 s in total, 100-300x the Vec. Vec<Box<u64>> (section 1.4) in between: 10-40x the Vec. Without the shuffle the list looks only a few times slower.
+Write your own number and its reason down now, then read on.
+machine: Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0,1; TSC 2.800 ticks/ns (times are TSC nanoseconds, not core cycles); transparent huge pages: madvise
+pinned: core 1
+10,000,000 nodes, links shuffled into random order; seed 7; Vec<u64> pages: 2 MB asked for (madvise); malloc'd nodes: GLIBC_TUNABLES glibc.malloc.hugetlb=1
+5 timed traversals per variant after one warm-up
+
+ variant  what                             time per traversal (ms)          time per element (ns)     AnonHuge kB,
+                                           p50       p99       max         p50     p99     max     n  process
+ vec      Vec<u64>, in order                11.033    11.417    11.417        1.10    1.14    1.14     5  118,784
+ list     linked list, one Box per node   2054.042  2593.105  2593.105      205.40  259.31  259.31     5  350,208
+ boxes    Vec<Box<u64>>                    135.145   189.459   189.459       13.51   18.95   18.95     5  507,904
+
+list / vec: 186x at the p50 (the chapter: 100-300x)
+boxes / vec: 12x at the p50 (the chapter: 10-40x)
+The list's time per node is the most honest memory-latency figure user code gets: compare it with the ladder in section 1.2 and the Lab 1.1 plateau.
+Write down time per element for both, with and without huge pages.
+

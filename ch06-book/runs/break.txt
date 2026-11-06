@@ -1,0 +1,30 @@
+Predict first (the chapter's prediction; write yours down before reading on):
+  after the drop the copy keeps a best bid the venue removed: wrong from the next update on,
+  silently, until an ask at or below it crosses the copy. With the check, the gap is seen on the
+  next update, about 50 µs later at 20,000 a second; a 200 ms resync at 20,000 a second buffers
+  4,000 updates, so a 70 ms one about 1,400; the replay of them is the small part, the round trip
+  the large one; and the tops agree again once the state is Live.
+
+Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0-1; clocksource tsc
+200,000 updates, seed 7, one every 50 µs (20,000 a second)
+
+1. Drop one update: seq 4179, the delete of the best bid at 6812351 ($68123.51).
+   the copy's top differs from the venue's from seq 4180 on: it still shows 6812351 as its best bid
+   an ask at or below 6812351 arrived at seq 4350, 171 updates and 8.55 ms after the drop: the copy is crossed, Top { bid: Some((6812351, 971)), ask: Some((6812351, 1947)) }
+   from the drop to the end, 6,600 of 195,821 updates left the copy's top wrong, the last at seq 11334, when later updates happened to rewrite it; nothing in the book said so.
+
+2. The sequence check in the feed handler, the Stale state, and the resync: 10 dropped updates, 19,582 apart; the snapshot arrives 70 ms after the request, the venue taking it half-way; the handler's book is TreeBook.
+   resync 1: dropped at 208.900 ms; gap seen 50 µs later: Live -> Stale; request sent at once: Stale -> Syncing;
+     snapshot joined 70.00 ms later with 1,400 buffered deltas, the join itself 153 µs of CPU: Syncing -> Live
+   resync 2: dropped at 1188.000 ms; gap seen 50 µs later: Live -> Stale; request sent at once: Stale -> Syncing;
+     snapshot joined 70.00 ms later with 1,400 buffered deltas, the join itself 175 µs of CPU: Syncing -> Live
+   resync 3: dropped at 2167.100 ms; gap seen 50 µs later: Live -> Stale; request sent at once: Stale -> Syncing;
+     snapshot joined 70.00 ms later with 1,400 buffered deltas, the join itself 194 µs of CPU: Syncing -> Live
+   ... 7 more
+   over 10 resyncs:
+    Live but wrong (drop to gap seen)  p50      50.0 p99      50.0 max      50.0 µs  (n 10)
+    Stale (gap seen to request sent)   p50      0.00 p99      0.00 max      0.00 µs  (n 10)
+    Syncing (request to Live)          p50      70.0 p99      70.0 max      70.0 ms  (n 10)
+    updates buffered while Syncing     p50      1400 p99      1400 max      1400 updates  (n 10)
+    on_snapshot: load and replay, CPU  p50       165 p99       194 max       194 µs  (n 10)
+   blind (not Live): 14,000 of 199,990 updates, 7.00%; tops differing from the venue's while Live: 0

@@ -1,0 +1,45 @@
+capstone run
+  mode paced, book array, queue mutex, stall-every 0 ms, build headline (t0 t3 t4)
+  file target/replay.bin (200,000 records), replayed 200,000, warm-up 100,000 (seq 1..100,000 left out), binary fnv64 a4fcecb1eb8e916f
+  machine: Intel(R) Xeon(R) Processor @ 2.10GHz; kernel 6.18.44-fc-v180; 2 CPUs allowed; clocksource tsc; governor n/a; isolated []; nohz_full [n/a]
+  clock: TSC 2100.0 MHz by calibrate(); back-to-back now() p50 40 ticks = 19.0 ns, in every interval below
+  cores: feed core 0, strategy core 1, gateway unpinned; memory locked (mlockall); replay mlocked, 2,735 pages touched
+  book window base 6779577 ticks, 65536 levels a side
+
+throughput: 200,000 updates in 2.007 s, 99,671 a second; 109,471 batches (decisions-file lines), 1.83 messages a batch; 1,149 orders through the gateway
+
+latency, ns, messages after warm-up:
+               count       p50       p99     p99.9         max   max at seq
+  decode           -   (stages build only: cargo build --release --features stages)
+  hop              -   (stages build only: cargo build --release --features stages)
+  think            -   (stages build only: cargo build --release --features stages)
+  total      100,000   379,647 8,880,127 18,137,087  18,972,671   121,489
+  out_hop        581 2,508,799 8,544,255 9,043,967   9,043,967   -
+
+worst 100 total (ns@seq), slowest first:
+  18,970,767@121489  18,969,710@121490  18,956,299@121491  18,950,325@121492  18,945,014@121493  18,938,905@121494  18,935,100@121495  18,933,395@121496
+  18,928,063@121497  18,926,926@121498  18,911,435@121499  18,907,355@121500  18,904,253@121501  18,888,141@121502  18,884,009@121503  18,880,629@121504
+  18,867,727@121505  18,859,229@121506  18,857,948@121507  18,857,606@121508  18,816,823@121509  18,815,055@121510  18,806,459@121511  18,788,180@121512
+  18,781,864@121513  18,745,444@121514  18,743,666@121515  18,742,090@121516  18,737,110@121517  18,734,344@121518  18,730,417@121519  18,725,490@121520
+  18,722,165@121521  18,721,029@121522  18,712,403@121523  18,702,397@121524  18,689,568@121525  18,686,454@121526  18,683,894@121527  18,678,592@121528
+  18,663,942@121529  18,652,618@121530  18,644,863@121531  18,634,300@121532  18,626,108@121533  18,615,569@121534  18,599,490@121535  18,581,218@121536
+  18,579,615@121537  18,564,602@121538  18,556,663@121539  18,550,820@121540  18,542,715@121541  18,534,344@121542  18,511,806@121543  18,502,654@121544
+  18,493,620@121545  18,489,603@121546  18,482,195@121547  18,477,210@121548  18,473,854@121549  18,444,628@121550  18,444,078@121551  18,417,898@121552
+  18,414,694@121553  18,406,284@121554  18,404,374@121555  18,404,033@121556  18,398,394@121557  18,398,086@121558  18,396,647@121559  18,388,290@121560
+  18,387,918@121561  18,386,952@121562  18,386,189@121563  18,377,129@121564  18,374,605@121565  18,370,909@121566  18,364,575@121567  18,351,522@121568
+  18,341,933@121569  18,337,265@121570  18,324,253@121571  18,321,428@121572  18,311,040@121573  18,309,107@121574  18,299,330@121575  18,291,779@121576
+  18,287,168@121577  18,253,668@121578  18,245,057@121579  18,208,445@121580  18,207,839@121581  18,204,049@121582  18,193,971@121583  18,180,297@121584
+  18,172,573@121585  18,166,676@121586  18,165,415@121587  18,138,281@121588
+
+must read zero:
+  sequence gaps            0   (handler state at the end: Live)
+  orders dropped           0   (output ring full)
+  backwards intervals      0   (a later stamp below an earlier one: two cores' counters disagree)
+  decisions not logged     0   (log full)
+  undecodable records      0
+  allocations after warm-up 1   (frees 23; counting allocator, every thread)
+  feed     core 0, on cpu 0 at warm-up, 0 at the end: page faults 16 (major 0), context switches 175 (voluntary 103, involuntary 72), migrations 0
+  strategy core 1, on cpu 1 at warm-up, 1 at the end: page faults 0 (major 0), context switches 97 (voluntary 52, involuntary 45), migrations 0
+  gateway  unpinned, on cpu 0 at warm-up, 0 at the end: page faults 0 (major 0), context switches 202 (voluntary 0, involuntary 202), migrations 6
+
+feed: 96,451 messages released more than 1 us after their tick; waited on a full queue 0 times

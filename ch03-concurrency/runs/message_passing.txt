@@ -1,0 +1,54 @@
+$ ./target/release/message_passing --iters 10_000_000 --cores 0,1
+Predict first. The chapter's prediction:
+  On x86-64: 0 stale reads in 100 million iterations, with --relaxed and with --release-acquire,
+  and cargo asm shows the two variants are the same instructions.
+  Each iteration moves the two lines between the cores: 20-100 ns an iteration, 2-10 s a run.
+  On AArch64, --relaxed can show stale reads, from none to thousands per 100 million
+  depending on the core, and --release-acquire none.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+placement: cores 0 and 1: two physical cores sharing one L3
+clock: 2.800 ticks per ns
+
+Lab 3.1, message passing, --relaxed: 10,000,000 iterations
+  writer pinned to core 0 (ran on CPU 0), reader pinned to core 1 (ran on CPU 1)
+  stale reads: 0 of 44,207,676 reads, 0.0 per 100 million iterations
+  writer, ns an iteration, batch by batch (1024 a batch): n 9765 p50 2.1 p99 100.7 p99.9 3964.0 max 54752.0 ns
+  wall 0.194 s: 19.4 ns an iteration (wall / iterations)
+
+Lab 3.1, message passing, --release-acquire: 10,000,000 iterations
+  writer pinned to core 0 (ran on CPU 0), reader pinned to core 1 (ran on CPU 1)
+  stale reads: 0 of 16,624,387 reads, 0.0 per 100 million iterations
+  writer, ns an iteration, batch by batch (1024 a batch): n 9765 p50 2.1 p99 96.2 p99.9 3966.0 max 5596.0 ns
+  wall 0.089 s: 8.9 ns an iteration (wall / iterations)
+
+
+$ ./target/release/message_passing --sb --rounds 1_000_000 --cores 0,1
+Predict first. The chapter's prediction:
+  On x86-64, store buffering is the reordering the hardware does show.
+  Release/Acquire: rounds where both loads return 0, between one in a thousand and one in
+  a hundred thousand, depending on how tightly the barrier lines the two threads up.
+  SeqCst: none, each round 10-20 ns slower for the two xchg's.
+  The barrier dominates a round: 200-500 ns a round, 2-5 s for 10 million.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+placement: cores 0 and 1: two physical cores sharing one L3
+clock: 2.800 ticks per ns
+
+Lab 3.1, store buffering, Release/Acquire: 1,000,000 rounds after 10,000 of warm-up
+  A pinned to core 0 (ran on CPU 0), B pinned to core 1 (ran on CPU 1)
+  both loads 0: 21,541 rounds, 21541.0 per million
+  outcomes (A's load of y, B's load of x): (0,0) 21,541  (0,1) 913,932  (1,0) 62,344  (1,1) 2,183
+  round, barrier to barrier: n 999999 p50 334 p99 459 p99.9 4143 max 24346623 ns
+  wall 0.803 s: 803.2 ns a round (wall / rounds)
+
+Lab 3.1, store buffering, SeqCst: 1,000,000 rounds after 10,000 of warm-up
+  A pinned to core 0 (ran on CPU 0), B pinned to core 1 (ran on CPU 1)
+  both loads 0: 0 rounds, 0.0 per million
+  outcomes (A's load of y, B's load of x): (0,0) 0  (0,1) 882,651  (1,0) 85,032  (1,1) 32,317
+  round, barrier to barrier: n 999999 p50 365 p99 1260 p99.9 9311 max 1739775 ns
+  wall 0.585 s: 584.8 ns a round (wall / rounds)
+
+

@@ -1,0 +1,45 @@
+capstone run
+  mode flat, book array, queue spsc, stall-every 0 ms, build headline (t0 t3 t4)
+  file target/replay.bin (200,000 records), replayed 200,000, warm-up 100,000 (seq 1..100,000 left out), binary fnv64 a4fcecb1eb8e916f
+  machine: Intel(R) Xeon(R) Processor @ 2.10GHz; kernel 6.18.44-fc-v180; 2 CPUs allowed; clocksource tsc; governor n/a; isolated []; nohz_full [n/a]
+  clock: TSC 2100.0 MHz by calibrate(); back-to-back now() p50 40 ticks = 19.0 ns, in every interval below
+  cores: feed core 0, strategy core 1, gateway unpinned; memory locked (mlockall); replay mlocked, 2,735 pages touched
+  book window base 6779577 ticks, 65536 levels a side
+
+throughput: 200,000 updates in 0.027 s, 7,363,008 a second; 40,176 batches (decisions-file lines), 4.98 messages a batch; 934 orders through the gateway
+
+latency, ns, messages after warm-up:
+               count       p50       p99     p99.9         max   max at seq
+  decode           -   (stages build only: cargo build --release --features stages)
+  hop              -   (stages build only: cargo build --release --features stages)
+  think            -   (stages build only: cargo build --release --features stages)
+  total      100,000     1,214 4,001,791 4,044,799   4,077,567   156,413
+  out_hop        572 1,733,631 3,880,959 3,960,831   3,960,831   -
+
+worst 100 total (ns@seq), slowest first:
+  4,076,571@156413  4,047,462@156414  4,047,432@156415  4,047,407@156416  4,047,383@156417  4,047,259@156418  4,047,229@156419  4,047,204@156420
+  4,047,179@156421  4,047,154@156422  4,047,127@156423  4,047,102@156424  4,047,076@156425  4,047,049@156426  4,047,023@156427  4,046,997@156428
+  4,046,970@156429  4,046,943@156430  4,046,916@156431  4,046,889@156432  4,046,863@156433  4,046,836@156434  4,046,809@156435  4,046,783@156436
+  4,046,756@156437  4,046,729@156438  4,046,703@156439  4,046,676@156440  4,046,649@156441  4,046,623@156442  4,046,595@156443  4,046,568@156444
+  4,046,542@156445  4,046,514@156446  4,046,487@156447  4,046,461@156448  4,046,434@156449  4,046,407@156450  4,046,381@156451  4,046,354@156452
+  4,046,327@156453  4,046,301@156454  4,046,274@156455  4,046,178@156456  4,046,151@156457  4,046,124@156458  4,046,098@156459  4,046,071@156460
+  4,045,970@156461  4,045,943@156462  4,045,770@156463  4,045,743@156464  4,045,718@156465  4,045,691@156466  4,045,534@156467  4,045,507@156468
+  4,045,481@156469  4,045,454@156470  4,045,397@156471  4,045,360@156472  4,045,333@156473  4,045,306@156474  4,045,280@156475  4,045,247@156476
+  4,045,179@156477  4,045,151@156478  4,045,123@156479  4,045,090@156480  4,045,063@156481  4,044,987@156482  4,044,949@156483  4,044,923@156484
+  4,044,871@156485  4,044,803@156486  4,044,765@156487  4,044,729@156488  4,044,703@156489  4,044,676@156490  4,044,603@156491  4,044,530@156492
+  4,044,329@156493  4,044,302@156494  4,044,269@156495  4,044,243@156496  4,044,216@156497  4,044,129@156498  4,044,025@156499  4,043,999@156500
+  4,043,972@156501  4,043,945@156502  4,043,870@156503  4,043,797@156504  4,043,767@156505  4,043,741@156506  4,043,714@156507  4,043,687@156508
+  4,043,641@156509  4,043,605@156510  4,043,579@156511  4,043,552@156512
+
+must read zero:
+  sequence gaps            0   (handler state at the end: Live)
+  orders dropped           0   (output ring full)
+  backwards intervals      0   (a later stamp below an earlier one: two cores' counters disagree)
+  decisions not logged     0   (log full)
+  undecodable records      0
+  allocations after warm-up 0   (frees 22; counting allocator, every thread)
+  feed     core 0, on cpu 0 at warm-up, 0 at the end: page faults 0 (major 0), context switches 0 (voluntary 0, involuntary 0), migrations 0
+  strategy core 1, on cpu 1 at warm-up, 1 at the end: page faults 0 (major 0), context switches 1 (voluntary 0, involuntary 1), migrations 0
+  gateway  unpinned, on cpu 1 at warm-up, 1 at the end: page faults 0 (major 0), context switches 2 (voluntary 0, involuntary 2), migrations 0
+
+feed: 0 messages released more than 1 us after their tick; waited on a full queue 747,312 times

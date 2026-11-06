@@ -1,0 +1,264 @@
+$ ./target/release/first_touch
+first_touch: 1024 MB anonymous, 262,144 pages of 4 KB, variant plain, 3 runs (Lab 2.3)
+Predict first (the chapter's prediction for 1 GB, scaled to 1024 MB): plain pass 1 is 262,144 faults at 0.5-1 µs, 130-260 ms; pass 2 stores to resident pages, a TLB and cache miss each but overlapped, 5.0-10 ms, 20-30 ns a page, 20-50x faster; the full write is bandwidth, 10-20 GB/s, 50-100 ms.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 1
+locked-memory limit: 8,192 KB; huge-page pool: 0 total, 0 free
+
+variant measured: plain
+                     n     p50 ms     p99 ms     max ms     faults   ns/page
+mmap                 3      0.011      0.019      0.019          0         - 
+pass 1 first touch   3    857.052    875.221    875.221    262,144    3269.4 
+pass 2 again         3     10.622     14.561     14.561          0      40.5 
+pass 3 full write    3    244.901    271.225    271.225          0         -      4.4 GB/s
+pass 1 / pass 2 at p50: 80.7x (the cost of faulting)
+faults: getrusage minor faults of this thread, p50 over the runs (perf's page-faults leaves out the kernel's own, taken inside MAP_POPULATE and mlockall)
+per store, one extra run with now() around each (a clock pair, ~14 ns, is inside every sample):
+  pass 1: n 262,144 p50 1,725 p99 5,163 p99.9 55,903 p99.99 4,143,103 max 8,146,943 ns
+  pass 2: n 262,144 p50 20 p99 265 p99.9 560 p99.99 1,335 max 8,118,271 ns
+smaps_rollup after the passes: AnonHugePages 0 kB, Locked 0 kB (region 1,048,576 kB); THP enabled: always [madvise] never
+deltas over all runs:
+  /proc/interrupts core 0: LOC +1,270, RES +312, CAL +194, TLB +194, 49 virtio7-input.0 +34, 33 virtio0-reporting_vq +3
+  LOC delta core 0: 1,270 (267/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +1,459, TIMER +411, SCHED +93, NET_RX +34
+  steal core 0: +70 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +1,219, RES +188, CAL +117, TLB +117, 37 virtio1-req.0 +54, 50 virtio7-output.0 +34, 32 virtio0-stats +1
+  LOC delta core 1: 1,219 (257/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +1,183, TIMER +277, SCHED +94, BLOCK +54, NET_RX +33
+  steal core 1: +50 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +585, nr_migrations +5
+Write down: the fault count and the three pass times for every variant, and the cost per 4 KB page implied by each.
+
+$ ./target/release/first_touch --size 256M
+first_touch: 256 MB anonymous, 65,536 pages of 4 KB, variant plain, 3 runs (Lab 2.3)
+Predict first (the chapter's prediction for 1 GB, scaled to 256 MB): plain pass 1 is 65,536 faults at 0.5-1 µs, 32-65 ms; pass 2 stores to resident pages, a TLB and cache miss each but overlapped, 1.2-2 ms, 20-30 ns a page, 20-50x faster; the full write is bandwidth, 10-20 GB/s, 12-25 ms.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+locked-memory limit: 8,192 KB; huge-page pool: 0 total, 0 free
+
+variant measured: plain
+                     n     p50 ms     p99 ms     max ms     faults   ns/page
+mmap                 3      0.014      0.017      0.017          0         - 
+pass 1 first touch   3    229.007    261.347    261.347     65,536    3494.4 
+pass 2 again         3      1.363      5.499      5.499          0      20.8 
+pass 3 full write    3     54.139     61.653     61.653          0         -      5.0 GB/s
+pass 1 / pass 2 at p50: 168.1x (the cost of faulting)
+faults: getrusage minor faults of this thread, p50 over the runs (perf's page-faults leaves out the kernel's own, taken inside MAP_POPULATE and mlockall)
+per store, one extra run with now() around each (a clock pair, ~13 ns, is inside every sample):
+  pass 1: n 65,536 p50 1,588 p99 5,115 p99.9 38,335 p99.99 4,077,567 max 4,706,303 ns
+  pass 2: n 65,536 p50 16 p99 225 p99.9 513 p99.99 696 max 29,615 ns
+smaps_rollup after the passes: AnonHugePages 0 kB, Locked 0 kB (region 262,144 kB); THP enabled: always [madvise] never
+deltas over all runs:
+  /proc/interrupts core 0: LOC +315, 49 virtio7-input.0 +19, RES +14, CAL +2, TLB +2
+  LOC delta core 0: 315 (258/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +294, TIMER +38, SCHED +21, NET_RX +19
+  steal core 0: +0 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +325, RES +30, 50 virtio7-output.0 +20, 37 virtio1-req.0 +3
+  LOC delta core 1: 325 (267/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +404, TIMER +154, SCHED +22, NET_RX +19, HRTIMER +4, BLOCK +3, TASKLET +2
+  steal core 1: +20 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +136, nr_migrations +0
+Write down: the fault count and the three pass times for every variant, and the cost per 4 KB page implied by each.
+
+$ ./target/release/first_touch --size 256M --populate
+first_touch: 256 MB anonymous, 65,536 pages of 4 KB, variant --populate, 3 runs (Lab 2.3)
+Predict first (the chapter's prediction for 1 GB, scaled to 256 MB): plain pass 1 is 65,536 faults at 0.5-1 µs, 32-65 ms; pass 2 stores to resident pages, a TLB and cache miss each but overlapped, 1.2-2 ms, 20-30 ns a page, 20-50x faster; the full write is bandwidth, 10-20 GB/s, 12-25 ms.
+Predict first, --populate: the faults move into the mmap, somewhat less than the plain pass 1, and pass 1 then equals pass 2.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+locked-memory limit: 8,192 KB; huge-page pool: 0 total, 0 free
+
+variant measured: --populate
+                     n     p50 ms     p99 ms     max ms     faults   ns/page
+mmap                 3    196.658    198.218    198.218     65,536         - 
+pass 1 first touch   3      1.521      1.523      1.523          0      23.2 
+pass 2 again         3      1.555      2.090      2.090          0      23.7 
+pass 3 full write    3     67.565     72.250     72.250          0         -      4.0 GB/s
+pass 1 / pass 2 at p50: 1.0x (the cost of faulting)
+faults: getrusage minor faults of this thread, p50 over the runs (perf's page-faults leaves out the kernel's own, taken inside MAP_POPULATE and mlockall)
+per store, one extra run with now() around each (a clock pair, ~13 ns, is inside every sample):
+  pass 1: n 65,536 p50 20 p99 236 p99.9 535 p99.99 4,203 max 32,735 ns
+  pass 2: n 65,536 p50 17 p99 244 p99.9 546 p99.99 3,621 max 69,567 ns
+smaps_rollup after the passes: AnonHugePages 0 kB, Locked 0 kB (region 262,144 kB); THP enabled: always [madvise] never
+deltas over all runs:
+  /proc/interrupts core 0: LOC +287, 49 virtio7-input.0 +21, RES +3, 33 virtio0-reporting_vq +1
+  LOC delta core 0: 287 (265/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +278, TIMER +43, NET_RX +21, SCHED +18
+  steal core 0: +20 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +276, RES +22, 50 virtio7-output.0 +20, 32 virtio0-stats +1, CAL +1, TLB +1
+  LOC delta core 1: 276 (255/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +331, TIMER +148, NET_RX +20, SCHED +19
+  steal core 1: +10 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +114, nr_migrations +0
+Write down: the fault count and the three pass times for every variant, and the cost per 4 KB page implied by each.
+
+$ ./target/release/first_touch --size 256M --thp
+first_touch: 256 MB anonymous, 65,536 pages of 4 KB, variant --thp, 3 runs (Lab 2.3)
+Predict first (the chapter's prediction for 1 GB, scaled to 256 MB): plain pass 1 is 65,536 faults at 0.5-1 µs, 32-65 ms; pass 2 stores to resident pages, a TLB and cache miss each but overlapped, 1.2-2 ms, 20-30 ns a page, 20-50x faster; the full write is bandwidth, 10-20 GB/s, 12-25 ms.
+Predict first, huge pages: 128 faults, each zeroing 2 MB in 100-200 µs, so pass 1 is 12-25 ms of zeroing bandwidth, and pass 2's dTLB-store-misses fall by about 512x.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+locked-memory limit: 8,192 KB; huge-page pool: 0 total, 0 free
+madvise(MADV_HUGEPAGE) accepted (transparent_hugepage/enabled: always [madvise] never)
+
+variant measured: --thp
+                     n     p50 ms     p99 ms     max ms     faults   ns/page
+mmap                 3      0.018      0.019      0.019          0         - 
+pass 1 first touch   3     73.329    122.921    122.921        128    1118.9 
+pass 2 again         3      1.087      5.133      5.133          0      16.6 
+pass 3 full write    3     52.939     57.171     57.171          0         -      5.1 GB/s
+pass 1 / pass 2 at p50: 67.5x (the cost of faulting)
+faults: getrusage minor faults of this thread, p50 over the runs (perf's page-faults leaves out the kernel's own, taken inside MAP_POPULATE and mlockall)
+per store, one extra run with now() around each (a clock pair, ~13 ns, is inside every sample):
+  pass 1: n 65,536 p50 14 p99 21 p99.9 371,711 p99.99 1,813,503 max 4,935,679 ns
+  pass 2: n 65,536 p50 13 p99 17 p99.9 31 p99.99 250 max 27,695 ns
+smaps_rollup after the passes: AnonHugePages 262,144 kB, Locked 0 kB (region 262,144 kB); THP enabled: always [madvise] never
+deltas over all runs:
+  /proc/interrupts core 0: LOC +143, 49 virtio7-input.0 +10, RES +1, CAL +1, TLB +1
+  LOC delta core 0: 143 (276/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +125, TIMER +20, NET_RX +10, SCHED +9
+  steal core 0: +10 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +132, CAL +49, TLB +49, RES +16, 50 virtio7-output.0 +10
+  LOC delta core 1: 132 (254/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +199, TIMER +65, NET_RX +10, SCHED +9
+  steal core 1: +0 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +56, nr_migrations +0
+Write down: the fault count and the three pass times for every variant, and the cost per 4 KB page implied by each.
+
+$ ./target/release/first_touch --size 256M --hugetlb
+first_touch: 256 MB anonymous, 65,536 pages of 4 KB, variant --hugetlb, 3 runs (Lab 2.3)
+Predict first (the chapter's prediction for 1 GB, scaled to 256 MB): plain pass 1 is 65,536 faults at 0.5-1 µs, 32-65 ms; pass 2 stores to resident pages, a TLB and cache miss each but overlapped, 1.2-2 ms, 20-30 ns a page, 20-50x faster; the full write is bandwidth, 10-20 GB/s, 12-25 ms.
+Predict first, huge pages: 128 faults, each zeroing 2 MB in 100-200 µs, so pass 1 is 12-25 ms of zeroing bandwidth, and pass 2's dTLB-store-misses fall by about 512x.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+locked-memory limit: 8,192 KB; huge-page pool: 0 total, 0 free
+warning: mmap(MAP_HUGETLB, 256 MB) refused: Cannot allocate memory (os error 12). The pool has 0 huge pages, 0 free, and this needs 128; reserve them first (root): echo 128 > /proc/sys/vm/nr_hugepages
+warning: continuing with 4 KB pages: these numbers are NOT --hugetlb
+
+variant measured: plain
+                     n     p50 ms     p99 ms     max ms     faults   ns/page
+mmap                 3      0.014      0.017      0.017          0         - 
+pass 1 first touch   3    242.275    243.736    243.736     65,536    3696.8 
+pass 2 again         3      1.573      1.674      1.674          0      24.0 
+pass 3 full write    3     66.119     69.754     69.754          0         -      4.1 GB/s
+pass 1 / pass 2 at p50: 154.0x (the cost of faulting)
+faults: getrusage minor faults of this thread, p50 over the runs (perf's page-faults leaves out the kernel's own, taken inside MAP_POPULATE and mlockall)
+per store, one extra run with now() around each (a clock pair, ~16 ns, is inside every sample):
+  pass 1: n 65,536 p50 1,499 p99 4,231 p99.9 41,247 p99.99 4,073,471 max 4,276,223 ns
+  pass 2: n 65,536 p50 21 p99 257 p99.9 570 p99.99 1,004 max 4,085,759 ns
+smaps_rollup after the passes: AnonHugePages 0 kB, Locked 0 kB (region 262,144 kB); THP enabled: always [madvise] never
+deltas over all runs:
+  /proc/interrupts core 0: LOC +322, CAL +27, TLB +27, 49 virtio7-input.0 +25, 33 virtio0-reporting_vq +3
+  LOC delta core 0: 322 (266/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +300, TIMER +37, NET_RX +25, SCHED +21
+  steal core 0: +20 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +331, 50 virtio7-output.0 +25, RES +22, CAL +4, TLB +4
+  LOC delta core 1: 331 (273/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +359, TIMER +163, NET_RX +25, SCHED +20
+  steal core 1: +20 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +127, nr_migrations +0
+Write down: the fault count and the three pass times for every variant, and the cost per 4 KB page implied by each.
+
+$ ./target/release/first_touch --size 256M --mlockall
+first_touch: 256 MB anonymous, 65,536 pages of 4 KB, variant --mlockall, 3 runs (Lab 2.3)
+Predict first (the chapter's prediction for 1 GB, scaled to 256 MB): plain pass 1 is 65,536 faults at 0.5-1 µs, 32-65 ms; pass 2 stores to resident pages, a TLB and cache miss each but overlapped, 1.2-2 ms, 20-30 ns a page, 20-50x faster; the full write is bandwidth, 10-20 GB/s, 12-25 ms.
+Predict first, --mlockall: the cost moves into the mmap like --populate, and Locked in smaps_rollup equals the region.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+locked-memory limit: 8,192 KB; huge-page pool: 0 total, 0 free
+mlockall(MCL_CURRENT | MCL_FUTURE): ok
+
+variant measured: --mlockall
+                     n     p50 ms     p99 ms     max ms     faults   ns/page
+mmap                 3    140.073    150.695    150.695     65,536         - 
+pass 1 first touch   3      1.242      5.569      5.569          0      19.0 
+pass 2 again         3      1.489      5.305      5.305          0      22.7 
+pass 3 full write    3     53.730     54.635     54.635          0         -      5.0 GB/s
+pass 1 / pass 2 at p50: 0.8x (the cost of faulting)
+faults: getrusage minor faults of this thread, p50 over the runs (perf's page-faults leaves out the kernel's own, taken inside MAP_POPULATE and mlockall)
+per store, one extra run with now() around each (a clock pair, ~16 ns, is inside every sample):
+  pass 1: n 65,536 p50 21 p99 219 p99.9 518 p99.99 4,831 max 33,503 ns
+  pass 2: n 65,536 p50 21 p99 213 p99.9 513 p99.99 1,438 max 4,081,663 ns
+smaps_rollup after the passes: AnonHugePages 0 kB, Locked 263,741 kB (region 262,144 kB); THP enabled: always [madvise] never
+deltas over all runs:
+  /proc/interrupts core 0: LOC +265, 49 virtio7-input.0 +22, CAL +6, TLB +6
+  LOC delta core 0: 265 (267/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +245, TIMER +27, NET_RX +22, SCHED +16
+  steal core 0: +10 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +252, RES +24, 50 virtio7-output.0 +21, CAL +12, TLB +12
+  LOC delta core 1: 252 (254/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +283, TIMER +133, NET_RX +21, SCHED +16
+  steal core 1: +0 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +107, nr_migrations +0
+Write down: the fault count and the three pass times for every variant, and the cost per 4 KB page implied by each.
+
+$ setpriv --bounding-set=-ipc_lock --inh-caps=-ipc_lock -- ./target/release/first_touch --size 64M --runs 1 --mlockall
+first_touch: 64 MB anonymous, 16,384 pages of 4 KB, variant --mlockall, 1 runs (Lab 2.3)
+Predict first (the chapter's prediction for 1 GB, scaled to 64 MB): plain pass 1 is 16,384 faults at 0.5-1 µs, 8-16 ms; pass 2 stores to resident pages, a TLB and cache miss each but overlapped, 0.3-1 ms, 20-30 ns a page, 20-50x faster; the full write is bandwidth, 10-20 GB/s, 3-6 ms.
+Predict first, --mlockall: the cost moves into the mmap like --populate, and Locked in smaps_rollup equals the region.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+locked-memory limit: 8,192 KB; huge-page pool: 0 total, 0 free
+mlockall(MCL_CURRENT | MCL_FUTURE): ok
+warning: mmap(64 MB) refused: Resource temporarily unavailable (os error 11). Under MCL_FUTURE every new mapping is locked, and RLIMIT_MEMLOCK is 8,192 KB; raise it with `ulimit -l unlimited` or shrink --size
+warning: munlockall and continuing: these numbers are NOT --mlockall
+
+variant measured: plain
+                     n     p50 ms     p99 ms     max ms     faults   ns/page
+mmap                 1      0.007      0.007      0.007          0         - 
+pass 1 first touch   1     31.313     31.313     31.313     16,384    1911.2 
+pass 2 again         1      0.363      0.363      0.363          0      22.2 
+pass 3 full write    1      8.547      8.547      8.547          0         -      7.9 GB/s
+pass 1 / pass 2 at p50: 86.2x (the cost of faulting)
+faults: getrusage minor faults of this thread, p50 over the runs (perf's page-faults leaves out the kernel's own, taken inside MAP_POPULATE and mlockall)
+per store, one extra run with now() around each (a clock pair, ~13 ns, is inside every sample):
+  pass 1: n 16,384 p50 1,591 p99 3,815 p99.9 31,663 p99.99 95,999 max 97,215 ns
+  pass 2: n 16,384 p50 16 p99 226 p99.9 509 p99.99 1,035 max 10,807 ns
+smaps_rollup after the passes: AnonHugePages 0 kB, Locked 0 kB (region 65,536 kB); THP enabled: always [madvise] never
+deltas over all runs:
+  /proc/interrupts core 0: LOC +22, RES +8
+  LOC delta core 0: 22 (270/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: TIMER +11, RCU +10, SCHED +1
+  steal core 0: +0 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +21
+  LOC delta core 1: 21 (258/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +53, SCHED +1
+  steal core 1: +0 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +11, nr_migrations +0
+Write down: the fault count and the three pass times for every variant, and the cost per 4 KB page implied by each.
+

@@ -1,0 +1,23 @@
+# objdump -d -M intel -C target/release/parse, the function ch04_network::read_fields
+# (the chapter prints this from cargo asm; the push/pop of rbp is the workspace's -C force-frame-pointers=yes)
+0000000000021390 <ch04_network::read_fields>:
+   21390:	push   rbp
+   21391:	mov    rbp,rsp
+   21394:	cmp    rsi,0x30
+   21398:	jb     213c3 <ch04_network::read_fields+0x33>
+   2139a:	cmp    WORD PTR [rdi+0x2],0x7
+   2139f:	jne    213c3 <ch04_network::read_fields+0x33>
+   213a1:	mov    rax,QWORD PTR [rdi+0x8]
+   213a5:	mov    QWORD PTR [rdx],rax
+   213a8:	mov    rax,QWORD PTR [rdi+0x20]
+   213ac:	mov    QWORD PTR [rdx+0x8],rax
+   213b0:	movups xmm0,XMMWORD PTR [rdi+0x10]
+   213b4:	movups XMMWORD PTR [rdx+0x10],xmm0
+   213b8:	movzx  eax,BYTE PTR [rdi+0x28]
+   213bc:	mov    BYTE PTR [rdx+0x20],al
+   213bf:	mov    al,0x1
+   213c1:	pop    rbp
+   213c2:	ret
+   213c3:	xor    eax,eax
+   213c5:	pop    rbp
+   213c6:	ret

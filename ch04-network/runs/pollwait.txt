@@ -1,0 +1,161 @@
+$ target/release/pollwait --loopback --blocking --gap 2000 --iters 2000 --warmup 200 --core 0 --server-core 1
+# 2026-10-28T05:17:37Z, load average 3.36 3.30 3.18
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  a sleeping mode without --c0 at a 2 ms gap: the governor picks its deepest state, +100-200 us: p50 105-210 us, p99 several hundred, max in ms.
+  CPU: near 0%, 1% at most. One voluntary context switch a round trip. System calls: one recvfrom (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+pollwait --blocking --gap 2000 to 127.0.0.1:43768: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 2,000 round trips after 200 of warm-up
+pollwait --blocking --gap 2000: n 2000  p50 80.1 µs  p99 3.95 ms  p99.9 7.95 ms  max 9.52 ms
+  client CPU 132.50 ms over 4523.04 ms of wall: 2.9% of its core
+  per round trip: 1.000 voluntary and 0.001 involuntary context switches
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --epoll --gap 2000 --iters 2000 --warmup 200 --core 0 --server-core 1
+# 2026-10-28T05:17:42Z, load average 3.25 3.28 3.18
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  a sleeping mode without --c0 at a 2 ms gap: the governor picks its deepest state, +100-200 us: p50 105-210 us, p99 several hundred, max in ms.
+  CPU: near 0%, 1% at most. One voluntary context switch a round trip. System calls: one epoll_wait and two recvfrom, one of them EAGAIN (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+pollwait --epoll --gap 2000 to 127.0.0.1:33521: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 2,000 round trips after 200 of warm-up
+pollwait --epoll --gap 2000: n 2000  p50 110.2 µs  p99 7.98 ms  p99.9 12.10 ms  max 28.54 ms
+  client CPU 148.56 ms over 6991.82 ms of wall: 2.1% of its core
+  per round trip: 1.000 voluntary and 0.001 involuntary context switches
+  epoll_wait calls: 1.00 a round trip
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --spin --gap 2000 --iters 2000 --warmup 200 --core 0 --server-core 1
+# 2026-10-28T05:17:49Z, load average 3.22 3.27 3.18
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  --spin without --c0: not immune; its softirq runs on a housekeeping core that now sleeps between packets, and many round trips pay that core's C6 exit, 100-200 us.
+  CPU: 100% at any gap; at 100-300 ns an empty poll, 3-10 million polls a second, about 7,000-20,000 per round trip at --gap 2000. System calls: only recvfrom (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+pollwait --spin --gap 2000 to 127.0.0.1:53463: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 2,000 round trips after 200 of warm-up
+pollwait --spin --gap 2000: n 1999  p50 8.02 ms  p99 19.96 ms  p99.9 34.05 ms  max 67.11 ms
+  client CPU 5945.72 ms over 18799.87 ms of wall: 31.6% of its core
+  per round trip: 0.000 voluntary and 0.833 involuntary context switches
+  empty polls: 13861 a round trip, 1,474,571 a second
+  lost (100 ms timeout): 1; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --busy-poll --gap 2000 --iters 2000 --warmup 200 --core 0 --server-core 1
+# 2026-10-28T05:18:10Z, load average 3.73 3.38 3.21
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  --busy-poll: about 3 us at p50 and 5-6 us at p99, round trips of 8-15 us; --c0 changes nothing.
+  CPU: 100% at any gap; at 100-300 ns an empty poll, 3-10 million polls a second, about 7,000-20,000 per round trip at --gap 2000. System calls: only recvfrom (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+pollwait --busy-poll --gap 2000 to 127.0.0.1:58048: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 2,000 round trips after 200 of warm-up
+pollwait --busy-poll --gap 2000: n 2000  p50 7.96 ms  p99 19.94 ms  p99.9 36.08 ms  max 48.04 ms
+  client CPU 6349.77 ms over 17532.04 ms of wall: 36.2% of its core
+  per round trip: 0.000 voluntary and 0.811 involuntary context switches
+  empty polls: 13469 a round trip, 1,536,487 a second
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --blocking --c0 --gap 2000 --iters 2000 --warmup 200 --core 0 --server-core 1
+# 2026-10-28T05:18:30Z, load average 4.01 3.47 3.25
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  --blocking --c0: --epoll's numbers less the epoll_wait, about 0.5 us: p50 13-22 us, p99 25-50 us.
+  CPU: near 0%, 1% at most. One voluntary context switch a round trip. System calls: one recvfrom (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+--c0: /dev/cpu_dma_latency held at 0 for the run
+pollwait --blocking --c0 --gap 2000 to 127.0.0.1:35219: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 2,000 round trips after 200 of warm-up
+pollwait --blocking --c0 --gap 2000: n 2000  p50 114.2 µs  p99 7.94 ms  p99.9 11.81 ms  max 15.16 ms
+  client CPU 148.50 ms over 7122.42 ms of wall: 2.1% of its core
+  per round trip: 1.000 voluntary and 0.001 involuntary context switches
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --epoll --c0 --gap 2000 --iters 2000 --warmup 200 --core 0 --server-core 1
+# 2026-10-28T05:18:38Z, load average 4.01 3.49 3.26
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  --epoll --c0: the card and the kernel's receive path, 8-10 us at p50 and 20-40 us at p99: round trips of 13-22 us at p50 and 25-50 us at p99.
+  CPU: near 0%, 1% at most. One voluntary context switch a round trip. System calls: one epoll_wait and two recvfrom, one of them EAGAIN (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+--c0: /dev/cpu_dma_latency held at 0 for the run
+pollwait --epoll --c0 --gap 2000 to 127.0.0.1:36795: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 2,000 round trips after 200 of warm-up
+pollwait --epoll --c0 --gap 2000: n 2000  p50 134.5 µs  p99 7.90 ms  p99.9 9.63 ms  max 11.67 ms
+  client CPU 161.78 ms over 7483.47 ms of wall: 2.2% of its core
+  per round trip: 1.000 voluntary and 0.000 involuntary context switches
+  epoll_wait calls: 1.00 a round trip
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --spin --c0 --gap 2000 --iters 2000 --warmup 200 --core 0 --server-core 1
+# 2026-10-28T05:18:47Z, load average 4.01 3.50 3.26
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  --spin --c0: 1-2 us more than --busy-poll, for the interrupt and the cross-core transfer.
+  CPU: 100% at any gap; at 100-300 ns an empty poll, 3-10 million polls a second, about 7,000-20,000 per round trip at --gap 2000. System calls: only recvfrom (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+--c0: /dev/cpu_dma_latency held at 0 for the run
+pollwait --spin --c0 --gap 2000 to 127.0.0.1:33006: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 2,000 round trips after 200 of warm-up
+pollwait --spin --c0 --gap 2000: n 2000  p50 8.07 ms  p99 18.01 ms  p99.9 43.75 ms  max 68.81 ms
+  client CPU 6043.49 ms over 18711.95 ms of wall: 32.3% of its core
+  per round trip: 0.000 voluntary and 0.937 involuntary context switches
+  empty polls: 13215 a round trip, 1,412,465 a second
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --busy-poll --c0 --gap 2000 --iters 2000 --warmup 200 --core 0 --server-core 1
+# 2026-10-28T05:19:07Z, load average 4.29 3.60 3.30
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  --busy-poll: about 3 us at p50 and 5-6 us at p99, round trips of 8-15 us; --c0 changes nothing.
+  CPU: 100% at any gap; at 100-300 ns an empty poll, 3-10 million polls a second, about 7,000-20,000 per round trip at --gap 2000. System calls: only recvfrom (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+--c0: /dev/cpu_dma_latency held at 0 for the run
+pollwait --busy-poll --c0 --gap 2000 to 127.0.0.1:39430: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 2,000 round trips after 200 of warm-up
+pollwait --busy-poll --c0 --gap 2000: n 2000  p50 7.98 ms  p99 18.02 ms  p99.9 40.21 ms  max 83.95 ms
+  client CPU 6576.55 ms over 18008.54 ms of wall: 36.5% of its core
+  per round trip: 0.000 voluntary and 0.939 involuntary context switches
+  empty polls: 12703 a round trip, 1,410,816 a second
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --blocking --gap 0 --iters 20000 --warmup 2000 --core 0 --server-core 1
+# 2026-10-28T05:19:28Z, load average 4.49 3.69 3.34
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  a sleeping mode at --gap 0: near the --c0 numbers (p50 13-22 us), since a core idle for 15-30 us is never sent deep: quiet sets a sleeping reader's tail.
+  CPU: near 0%, 1% at most. One voluntary context switch a round trip. System calls: one recvfrom (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+pollwait --blocking --gap 0 to 127.0.0.1:57117: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 20,000 round trips after 2,000 of warm-up
+pollwait --blocking --gap 0: n 20000  p50 49.4 µs  p99 3.67 ms  p99.9 8.15 ms  max 16.01 ms
+  client CPU 841.91 ms over 3719.87 ms of wall: 22.6% of its core
+  per round trip: 0.998 voluntary and 0.001 involuntary context switches
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+
+$ target/release/pollwait --loopback --epoll --tcp --gap 0 --iters 20000 --warmup 2000 --core 0 --server-core 1
+# 2026-10-28T05:19:32Z, load average 4.37 3.68 3.33
+Predict first (the chapter's prediction):
+  Two machines (the chapter's setup): the server's half and the wire are the same in every run, the
+  ladder's busy-polled round trip less one busy-polled receive, about 5-12 us. Each mode adds its own receive:
+  a sleeping mode at --gap 0: near the --c0 numbers (p50 13-22 us), since a core idle for 15-30 us is never sent deep: quiet sets a sleeping reader's tail.
+  CPU: near 0%, 1% at most. One voluntary context switch a round trip. System calls: one epoll_wait and two recvfrom, one of them EAGAIN (and the send).
+  Over --loopback there is no card, no interrupt and no second box: the sender's own system call runs the
+  receive path, so the modes differ by the wake-up alone, and --busy-poll has no ring to poll (it measures --spin).
+pollwait --epoll --tcp --gap 0 to 127.0.0.1:35425: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0], 20,000 round trips after 2,000 of warm-up
+pollwait --epoll --tcp --gap 0: n 20000  p50 57.8 µs  p99 8.12 ms  p99.9 12.06 ms  max 16.55 ms
+  client CPU 1086.46 ms over 8415.75 ms of wall: 12.9% of its core
+  per round trip: 0.997 voluntary and 0.004 involuntary context switches
+  epoll_wait calls: 1.00 a round trip
+  lost (100 ms timeout): 0; UdpRcvbufErrors +0; TcpExtBusyPollRxPackets +0 (box-wide)
+

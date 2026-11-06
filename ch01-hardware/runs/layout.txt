@@ -1,0 +1,18 @@
+$ ./target/release/layout
+# load average: 4.09 3.83 3.16 (2 vCPUs, shared with other builds)
+Predict first (the chapter's prediction): OrderC 40 8, OrderSorted 24 8, OrderRust 24 8 (the three lines below); then PriceLevel 32 8, Counters 128, CachePadded<AtomicU64> 128 on x86-64, Option<u64> 16, Option<NonZeroU64> 8.
+Write your own number and its reason down now, then read on.
+40 8
+24 8
+24 8
+
+PriceLevel               size   32  align    8
+Padded<AtomicU64>        size   64  align   64
+Counters                 size  128  align   64
+CachePadded<AtomicU64>   size  128  align  128
+Adjacent (Lab 1.3)       size   64  align   64
+Option<u64>              size   16  align    8
+Option<NonZeroU64>       size    8  align    8
+
+A million OrderC take 40 MB, a million OrderSorted 24 MB.
+

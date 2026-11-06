@@ -1,0 +1,17 @@
+Predict first (the chapter's prediction; write yours down before reading on):
+  write down which structure you expect to fail first, and on which kind of update.
+  The chapter's answer: the walk inward, when the best level empties and has to be found
+  again, is where the three disagree first; the array's cursor and bitmap are the code at risk.
+
+Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0-1; clocksource tsc
+TSC 2.800 GHz; two rdtsc reads back to back: p50 39 ticks, 13.9 ns, subtracted below
+build: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+1,000,000 updates, seed 7, one in 3 a removal, 200 levels a side; the array's window 6779554..6845090 centred on the first mid 6812322
+
+the three tops agreed after every one of 1,000,000 updates: 6,449 top changes, 1,592 times the best emptied and was found again
+
+apply, each timed alone, minus the clock pair (the replay lab times them properly):
+  ArrayBook  p50    9.07 p99    26.1 p99.9     148 max    106353 ns  (n 1,000,000)
+  VecBook    p50    44.1 p99     116 p99.9     208 max    178929 ns  (n 1,000,000)
+  TreeBook   p50    56.1 p99     175 p99.9     299 max     75633 ns  (n 1,000,000)
+exit status: 0

@@ -1,0 +1,19 @@
+[package]
+name = "ch03-concurrency"
+version = "0.1.0"
+description = "The concurrency chapter: litmus tests, a contended counter, ping-pong, and a 16-slot ring proved with loom"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+hdrhistogram = { version = "7", default-features = false }
+libc = "0.2"
+
+# Only in a build made with RUSTFLAGS="--cfg loom": the model checker of section 3.5.
+[target.'cfg(loom)'.dependencies]
+loom = "0.7"
+
+[lints.rust]
+# loom, and Lab 3.4's two rings broken on purpose (README: "Breaking the ring").
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)', 'cfg(relaxed_head_store)', 'cfg(relaxed_tail_load)'] }

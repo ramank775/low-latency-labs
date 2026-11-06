@@ -1,0 +1,17 @@
+$ ./target/release/spsc --items 10_000_000 --cores 0,1
+Predict first. The chapter's prediction:
+  16 slots and no cached copies: every push reads the tail line, every pop the head line,
+  and the ring swings between full and empty. 30-100 ns an item, 3-10 s for 100 million.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+placement: cores 0 and 1: two physical cores sharing one L3
+clock: 2.800 ticks per ns
+
+Lab 3.4, Ring<16>: 10,000,000 items
+  producer pinned to core 0 (ran on CPU 0), consumer pinned to core 1 (ran on CPU 1)
+  arrived as 1 to 10,000,000: yes, none lost or duplicated
+  push found the ring full 67,867,036 times; pop found it empty 57,743,484 times
+  consumer, ns an item, batch by batch (1024 a batch): n 9765 p50 43.0 p99 7924.0 p99.9 98496.0 max 400640.0 ns
+  wall 3.991 s: 399.1 ns an item (wall / items)
+

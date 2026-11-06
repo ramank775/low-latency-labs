@@ -1,0 +1,45 @@
+# cargo-show-asm is not installed on this VM; objdump of the release binary shows the same functions.
+$ objdump -d --no-show-raw-insn -C target/release/message_passing   (one function at a time)
+== ch03_concurrency::litmus::mp_write_relaxed
+  push   %rbp
+  mov    %rsp,%rbp
+  mov    %rsi,(%rdi)
+  mov    %rsi,0x80(%rdi)
+  pop    %rbp
+  ret
+== ch03_concurrency::litmus::mp_write_release
+  push   %rbp
+  mov    %rsp,%rbp
+  mov    %rsi,(%rdi)
+  mov    %rsi,0x80(%rdi)
+  pop    %rbp
+  ret
+== ch03_concurrency::litmus::mp_read_relaxed
+  push   %rbp
+  mov    %rsp,%rbp
+  mov    0x80(%rdi),%rax
+  mov    (%rdi),%rdx
+  pop    %rbp
+  ret
+== ch03_concurrency::litmus::mp_read_acquire
+  push   %rbp
+  mov    %rsp,%rbp
+  mov    0x80(%rdi),%rax
+  mov    (%rdi),%rdx
+  pop    %rbp
+  ret
+== ch03_concurrency::litmus::sb_release_acquire
+  push   %rbp
+  mov    %rsp,%rbp
+  movq   $0x1,(%rdi)
+  mov    (%rsi),%rax
+  pop    %rbp
+  ret
+== ch03_concurrency::litmus::sb_seqcst
+  push   %rbp
+  mov    %rsp,%rbp
+  mov    $0x1,%eax
+  xchg   %rax,(%rdi)
+  mov    (%rsi),%rax
+  pop    %rbp
+  ret

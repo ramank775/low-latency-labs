@@ -1,0 +1,26 @@
+Predict first (the chapter's prediction; write yours down before reading on):
+  the padded ring at 5-20 ns an item; with head and tail on one line it falls to 30-100 ns,
+  since every push and every pop must take the line back from the other core (50-100 ns),
+  and perf c2c ranks that line first by HITM events.
+
+Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0-1; clocksource tsc
+TSC 2.800 GHz; two rdtsc reads back to back: p50 45 ticks, 16.1 ns, subtracted below
+flat out: 4,000,000 items; paced: 200,000 items, one every 1000 ns
+
+spsc ring, padded
+  producer: NOT pinned: core 2 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  consumer: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  throughput, flat out: 0.5 M items/s
+    per item, by block of 4096: p50    1954 p99    2922 p99.9    3910 max      3910 ns  (n 966)
+  latency, paced one per 1000 ns, push to pop, minus the clock pair:
+    p50  594415 p99 8028143 p99.9 8040431 max  12058607 ns  (n 198,000)
+
+spsc ring, one line
+  producer: NOT pinned: core 2 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  consumer: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  throughput, flat out: 1.9 M items/s
+    per item, by block of 4096: p50    22.7 p99    2894 p99.9    4596 max      4596 ns  (n 966)
+  latency, paced one per 1000 ns, push to pop, minus the clock pair:
+    p50 4022255 p99 8044527 p99.9 8073199 max  12091375 ns  (n 198,000)
+
+one line against padded, p50 to p50: throughput per item 0.01x, paced latency 6.77x

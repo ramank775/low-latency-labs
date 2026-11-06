@@ -1,0 +1,45 @@
+capstone run
+  mode paced, book tree, queue spsc, stall-every 0 ms, build headline (t0 t3 t4)
+  file target/replay.bin (200,000 records), replayed 200,000, warm-up 100,000 (seq 1..100,000 left out), binary fnv64 a4fcecb1eb8e916f
+  machine: Intel(R) Xeon(R) Processor @ 2.10GHz; kernel 6.18.44-fc-v180; 2 CPUs allowed; clocksource tsc; governor n/a; isolated []; nohz_full [n/a]
+  clock: TSC 2100.0 MHz by calibrate(); back-to-back now() p50 40 ticks = 19.0 ns, in every interval below
+  cores: feed core 0, strategy core 1, gateway unpinned; memory locked (mlockall); replay mlocked, 2,735 pages touched
+  book window base 6779577 ticks, 65536 levels a side
+
+throughput: 200,000 updates in 2.007 s, 99,652 a second; 90,539 batches (decisions-file lines), 2.21 messages a batch; 837 orders through the gateway
+
+latency, ns, messages after warm-up:
+               count       p50       p99     p99.9         max   max at seq
+  decode           -   (stages build only: cargo build --release --features stages)
+  hop              -   (stages build only: cargo build --release --features stages)
+  think            -   (stages build only: cargo build --release --features stages)
+  total      100,000   128,063 5,447,679 7,770,111   8,069,119   164,755
+  out_hop        419 3,293,183 7,942,143 8,019,967   8,019,967   -
+
+worst 100 total (ns@seq), slowest first:
+  8,068,690@164755  8,068,034@156100  8,061,505@156101  8,058,919@156102  8,056,304@164756  8,053,281@145405  8,052,374@156103  8,050,628@156104
+  8,047,765@156105  8,046,616@145406  8,044,106@156106  8,040,655@156107  8,036,467@156108  8,035,141@164757  8,026,108@164758  8,025,674@145407
+  8,025,659@164759  8,019,667@145408  8,018,077@156109  8,017,398@164760  8,009,114@145409  8,005,696@164761  8,003,025@164762  8,000,669@156110
+  7,986,362@145410  7,984,517@164763  7,983,707@145411  7,983,090@145412  7,981,131@164764  7,978,352@156111  7,977,212@156112  7,973,883@145413
+  7,970,383@164765  7,968,309@145414  7,964,196@145415  7,951,296@145416  7,951,280@164766  7,948,614@145417  7,948,577@164767  7,943,689@145418
+  7,943,147@164768  7,941,625@145419  7,941,093@145420  7,939,070@145421  7,933,227@164769  7,932,835@145422  7,925,079@164770  7,923,971@164771
+  7,923,495@156113  7,920,823@164772  7,917,831@156114  7,915,684@164773  7,914,688@156115  7,908,002@164774  7,907,391@156116  7,904,589@145423
+  7,904,545@164775  7,899,608@145424  7,897,507@164776  7,895,298@164777  7,895,281@145425  7,893,255@164778  7,890,669@164779  7,886,439@164780
+  7,883,050@145426  7,882,438@164781  7,880,067@156117  7,879,180@145427  7,877,502@156118  7,875,451@145428  7,873,772@145429  7,870,942@164782
+  7,866,370@164783  7,865,665@164784  7,864,484@164785  7,862,259@164786  7,852,513@145430  7,840,581@145431  7,831,094@145432  7,822,729@156119
+  7,822,269@164787  7,819,446@164788  7,810,953@145433  7,809,868@156120  7,809,122@145434  7,803,537@164789  7,802,533@156121  7,793,978@156122
+  7,792,480@164790  7,787,114@164791  7,787,039@156123  7,785,965@164792  7,782,261@164793  7,773,284@145435  7,772,645@164794  7,772,347@164795
+  7,771,686@164796  7,771,448@156124  7,770,731@145436  7,767,924@156125
+
+must read zero:
+  sequence gaps            0   (handler state at the end: Live)
+  orders dropped           0   (output ring full)
+  backwards intervals      0   (a later stamp below an earlier one: two cores' counters disagree)
+  decisions not logged     0   (log full)
+  undecodable records      0
+  allocations after warm-up 690   (frees 733; counting allocator, every thread)
+  feed     core 0, on cpu 0 at warm-up, 0 at the end: page faults 0 (major 0), context switches 42 (voluntary 0, involuntary 42), migrations 0
+  strategy core 1, on cpu 1 at warm-up, 1 at the end: page faults 0 (major 0), context switches 106 (voluntary 0, involuntary 106), migrations 0
+  gateway  unpinned, on cpu 1 at warm-up, 0 at the end: page faults 0 (major 0), context switches 128 (voluntary 0, involuntary 128), migrations 3
+
+feed: 36,974 messages released more than 1 us after their tick; waited on a full queue 0 times

@@ -1,0 +1,21 @@
+[package]
+name = "ch07-capstone"
+version = "0.1.0"
+description = "The capstone: the week's pieces in one loop, measured end to end"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+# Per-message stage stamps t1 and t2 and the decode/hop/think histograms.
+# Off by default: they cost 40-60 ns inside the number they report.
+stages = []
+
+[dependencies]
+ch04-network = { path = "../ch04-network" }
+ch05-structures = { path = "../ch05-structures" }
+ch06-book = { path = "../ch06-book" }
+core_affinity = "0.8"
+hdrhistogram = { version = "7", default-features = false }
+libc = "0.2"
+memmap2 = "0.9"

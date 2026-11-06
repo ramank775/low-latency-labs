@@ -1,0 +1,178 @@
+$ ./target/release/counter --iters 2_000_000 --threads 2 --cores 0,1
+Predict first. The chapter's prediction:
+  --per-thread: a load and a store on an owned line, about 5 cycles: 1-2 ns an increment,
+    10-20 ms for 10 million, the four threads running in parallel.
+  --per-thread-rmw: a locked instruction each, about 5 ns: 50 ms.
+  --atomic: 40 million increments on one line: 15-50 ns an increment overall (throughput,
+    wall / 40 million; one increment's latency is 50-300 ns), 0.6-2 s, 30-100x --per-thread.
+  --unpadded: the same range as --atomic: the counters are separate, the line is not.
+  --mutex: 2-10x --atomic, 2-10 s, hundreds of thousands to millions of futex calls and
+    context switches to match; uneven finish times, the first can finish in half the last's time.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+placement: cores 0-1; every pair shares one L3
+clock: 2.800 ticks per ns
+
+Lab 3.2, --per-thread: 2 threads x 2,000,000 increments
+  threads on cores: 0 (ran on 0), 1 (ran on 1)
+  total 4,000,000, as expected
+  wall 24.9 ms, 6.24 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 12.5, 24.9
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 2.1 p99 2.9 p99.9 52.9 max 16080.9 ns
+  context switches, all threads: 0 voluntary, 2 involuntary
+
+Lab 3.2, --per-thread-rmw: 2 threads x 2,000,000 increments
+  threads on cores: 0 (ran on 0), 1 (ran on 1)
+  total 4,000,000, as expected
+  wall 53.0 ms, 13.26 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 23.2, 53.0
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 6.2 p99 10.6 p99.9 4059.1 max 12083.2 ns
+  context switches, all threads: 0 voluntary, 6 involuntary
+
+Lab 3.2, --unpadded: 2 threads x 2,000,000 increments
+  threads on cores: 0 (ran on 0), 1 (ran on 1)
+  total 4,000,000, as expected
+  wall 65.2 ms, 16.30 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 41.3, 65.2
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 6.2 p99 65.9 p99.9 8077.3 max 16097.3 ns
+  context switches, all threads: 0 voluntary, 11 involuntary
+
+Lab 3.2, --atomic: 2 threads x 2,000,000 increments
+  threads on cores: 0 (ran on 0), 1 (ran on 1)
+  total 4,000,000, as expected
+  wall 81.3 ms, 20.32 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 70.3, 81.3
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 6.8 p99 57.5 p99.9 12058.6 max 12116.0 ns
+  context switches, all threads: 0 voluntary, 13 involuntary
+
+Lab 3.2, --mutex: 2 threads x 2,000,000 increments
+  threads on cores: 0 (ran on 0), 1 (ran on 1)
+  total 4,000,000, as expected
+  wall 171.5 ms, 42.88 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 153.7, 171.5
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 15.5 p99 411.1 p99.9 12132.4 max 32604.2 ns
+  context switches, all threads: 20 voluntary, 30 involuntary
+
+variant              wall ms   ns/increment  x per-thread voluntary cs involuntary cs
+--per-thread            24.9           6.24           1.0            0              2
+--per-thread-rmw        53.0          13.26           2.1            0              6
+--unpadded              65.2          16.30           2.6            0             11
+--atomic                81.3          20.32           3.3            0             13
+--mutex                171.5          42.88           6.9           20             30
+
+$ ./target/release/counter --iters 1_000_000
+Predict first. The chapter's prediction:
+  --per-thread: a load and a store on an owned line, about 5 cycles: 1-2 ns an increment,
+    10-20 ms for 10 million, the four threads running in parallel.
+  --per-thread-rmw: a locked instruction each, about 5 ns: 50 ms.
+  --atomic: 40 million increments on one line: 15-50 ns an increment overall (throughput,
+    wall / 40 million; one increment's latency is 50-300 ns), 0.6-2 s, 30-100x --per-thread.
+  --unpadded: the same range as --atomic: the counters are separate, the line is not.
+  --mutex: 2-10x --atomic, 2-10 s, hundreds of thousands to millions of futex calls and
+    context switches to match; uneven finish times, the first can finish in half the last's time.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+placement: cores 2-5; 2 and 3: unknown (no topology in /sys); 2 and 4: unknown (no topology in /sys); 2 and 5: unknown (no topology in /sys); 3 and 4: unknown (no topology in /sys); 3 and 5: unknown (no topology in /sys); 4 and 5: unknown (no topology in /sys)
+clock: 2.800 ticks per ns
+
+pin: thread 1: core 3 is not available to this process (allowed: 0-1); thread 1 runs unpinned. Pass cores from that list.
+pin: thread 3: core 5 is not available to this process (allowed: 0-1); thread 3 runs unpinned. Pass cores from that list.
+pin: thread 0: core 2 is not available to this process (allowed: 0-1); thread 0 runs unpinned. Pass cores from that list.
+pin: thread 2: core 4 is not available to this process (allowed: 0-1); thread 2 runs unpinned. Pass cores from that list.
+Lab 3.2, --per-thread: 4 threads x 1,000,000 increments
+  threads on cores: unpinned (last on 1), unpinned (last on 1), unpinned (last on 1), unpinned (last on 0)
+  total 4,000,000, as expected
+  wall 18.3 ms, 4.57 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 18.3, 10.2, 2.3, 2.2
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 2.2 p99 2.5 p99.9 23.8 max 32.9 ns
+  context switches, all threads: 0 voluntary, 1 involuntary
+
+pin: thread 1: core 3 is not available to this process (allowed: 0-1); thread 1 runs unpinned. Pass cores from that list.
+pin: thread 0: core 2 is not available to this process (allowed: 0-1); thread 0 runs unpinned. Pass cores from that list.
+pin: thread 2: core 4 is not available to this process (allowed: 0-1); thread 2 runs unpinned. Pass cores from that list.
+pin: thread 3: core 5 is not available to this process (allowed: 0-1); thread 3 runs unpinned. Pass cores from that list.
+Lab 3.2, --per-thread-rmw: 4 threads x 1,000,000 increments
+  threads on cores: unpinned (last on 1), unpinned (last on 0), unpinned (last on 0), unpinned (last on 1)
+  total 4,000,000, as expected
+  wall 47.2 ms, 11.80 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 44.3, 34.6, 26.8, 47.2
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 6.2 p99 22.8 p99.9 4067.3 max 28065.8 ns
+  context switches, all threads: 0 voluntary, 6 involuntary
+
+pin: thread 1: core 3 is not available to this process (allowed: 0-1); thread 1 runs unpinned. Pass cores from that list.
+pin: thread 0: core 2 is not available to this process (allowed: 0-1); thread 0 runs unpinned. Pass cores from that list.
+pin: thread 3: core 5 is not available to this process (allowed: 0-1); thread 3 runs unpinned. Pass cores from that list.
+pin: thread 2: core 4 is not available to this process (allowed: 0-1); thread 2 runs unpinned. Pass cores from that list.
+Lab 3.2, --unpadded: 4 threads x 1,000,000 increments
+  threads on cores: unpinned (last on 1), unpinned (last on 0), unpinned (last on 1), unpinned (last on 0)
+  total 4,000,000, as expected
+  wall 66.8 ms, 16.70 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 66.8, 56.3, 59.6, 38.1
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 6.5 p99 45.3 p99.9 20070.4 max 28082.2 ns
+  context switches, all threads: 0 voluntary, 10 involuntary
+
+pin: thread 1: core 3 is not available to this process (allowed: 0-1); thread 1 runs unpinned. Pass cores from that list.
+pin: thread 2: core 4 is not available to this process (allowed: 0-1); thread 2 runs unpinned. Pass cores from that list.
+pin: thread 0: core 2 is not available to this process (allowed: 0-1); thread 0 runs unpinned. Pass cores from that list.
+pin: thread 3: core 5 is not available to this process (allowed: 0-1); thread 3 runs unpinned. Pass cores from that list.
+Lab 3.2, --atomic: 4 threads x 1,000,000 increments
+  threads on cores: unpinned (last on 1), unpinned (last on 0), unpinned (last on 0), unpinned (last on 1)
+  total 4,000,000, as expected
+  wall 55.7 ms, 13.93 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 39.9, 33.4, 23.9, 55.7
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 6.2 p99 24.5 p99.9 707.6 max 36077.6 ns
+  context switches, all threads: 0 voluntary, 4 involuntary
+
+pin: thread 0: core 2 is not available to this process (allowed: 0-1); thread 0 runs unpinned. Pass cores from that list.
+pin: thread 2: core 4 is not available to this process (allowed: 0-1); thread 2 runs unpinned. Pass cores from that list.
+pin: thread 1: core 3 is not available to this process (allowed: 0-1); thread 1 runs unpinned. Pass cores from that list.
+pin: thread 3: core 5 is not available to this process (allowed: 0-1); thread 3 runs unpinned. Pass cores from that list.
+Lab 3.2, --mutex: 4 threads x 1,000,000 increments
+  threads on cores: unpinned (last on 1), unpinned (last on 0), unpinned (last on 1), unpinned (last on 0)
+  total 4,000,000, as expected
+  wall 204.7 ms, 51.19 ns an increment (wall / 4,000,000)
+  finish times, ms after the start: 175.1, 204.7, 193.1, 196.7
+  ns an increment, batch by batch (1,000 a batch, all threads): n 4000 p50 15.8 p99 4079.6 p99.9 28082.2 max 92274.7 ns
+  context switches, all threads: 75 voluntary, 45 involuntary
+
+variant              wall ms   ns/increment  x per-thread voluntary cs involuntary cs
+--per-thread            18.3           4.57           1.0            0              1
+--per-thread-rmw        47.2          11.80           2.6            0              6
+--unpadded              66.8          16.70           3.7            0             10
+--atomic                55.7          13.93           3.0            0              4
+--mutex                204.7          51.19          11.2           75             45
+
+$ strace -f -c -e trace=futex ./target/release/counter --mutex --iters 1_000_000 --threads 2 --cores 0,1
+Predict first. The chapter's prediction:
+  --per-thread: a load and a store on an owned line, about 5 cycles: 1-2 ns an increment,
+    10-20 ms for 10 million, the four threads running in parallel.
+  --per-thread-rmw: a locked instruction each, about 5 ns: 50 ms.
+  --atomic: 40 million increments on one line: 15-50 ns an increment overall (throughput,
+    wall / 40 million; one increment's latency is 50-300 ns), 0.6-2 s, 30-100x --per-thread.
+  --unpadded: the same range as --atomic: the counters are separate, the line is not.
+  --mutex: 2-10x --atomic, 2-10 s, hundreds of thousands to millions of futex calls and
+    context switches to match; uneven finish times, the first can finish in half the last's time.
+Write your own down before reading the numbers below.
+
+machine: x86_64 (uname -m), 2 CPUs available to this process (0-1), Intel(R) Xeon(R) Processor @ 2.80GHz
+placement: cores 0-1; every pair shares one L3
+clock: 2.800 ticks per ns
+
+strace: Process 12467 attached
+strace: Process 12466 attached
+Lab 3.2, --mutex: 2 threads x 1,000,000 increments
+  threads on cores: 0 (ran on 0), 1 (ran on 1)
+  total 2,000,000, as expected
+  wall 69.4 ms, 34.71 ns an increment (wall / 2,000,000)
+  finish times, ms after the start: 69.4, 27.9
+  ns an increment, batch by batch (1,000 a batch, all threads): n 2000 p50 14.9 p99 318.2 p99.9 4071.4 max 12927.0 ns
+  context switches, all threads: 266 voluntary, 91 involuntary
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.014971         113       132        36 futex
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.014971         113       132        36 total
+

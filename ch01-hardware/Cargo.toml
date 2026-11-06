@@ -1,0 +1,11 @@
+[package]
+name = "ch01-hardware"
+version = "0.1.0"
+description = "The memory-and-CPU chapter: stride walk, branches, false sharing, pointer chasing"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+crossbeam-utils = "0.8"   # CachePadded, the padded variant of Lab 1.3
+libc = "0.2"              # sched_setaffinity, madvise

@@ -1,0 +1,24 @@
+$ ./target/release/false_sharing --cores 0,1
+# load average: 2.89 3.40 2.72 (2 vCPUs, shared with other builds)
+Predict first (the chapter's prediction): padded, each line stays Modified in its own L1 and an atomic add costs about 5 ns: 100 M x 5 ns = 0.5 s. Adjacent, the line bounces; not every increment pays the full 50-100 ns, but many do: 5-20x slower, roughly 2.5-10 s. Write down the ratio you expect.
+Write your own number and its reason down now, then read on.
+machine: Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0,1; TSC 2.800 ticks/ns (times are TSC nanoseconds, not core cycles); transparent huge pages: madvise
+cores 0 and 1: one socket (0), not hyperthread siblings unless warned above
+100,000,000 increments per thread, timed in blocks of 1,000,000: one sample per block per thread
+
+thread a pinned: core 0
+thread b pinned: core 1
+
+ variant    layout                                 wall (s)    time per increment (ns)       samples
+                                                                 p50      p99      max
+ adjacent   a at byte 0, b at byte 8: one line        2.648      25.58    51.55    76.29       200
+            (8 bytes apart, same line; the threads overlapped for 98% of the wall time)
+ padded     CachePadded: 128 bytes apart              1.237      12.32    20.74    26.21       200
+            (128 bytes apart, different lines; the threads overlapped for 97% of the wall time)
+ align64    Counters, Padded<T>: 64 bytes apart       1.376      14.28    20.61    23.19       200
+            (64 bytes apart, different lines; the threads overlapped for 89% of the wall time)
+
+adjacent / padded: 2.1x in wall time (the chapter: 5-20x)
+adjacent / align64: 1.9x in wall time (the chapter: 5-20x)
+Write down both times, the ratio, and the cores used.
+

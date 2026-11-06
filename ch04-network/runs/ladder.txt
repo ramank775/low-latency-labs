@@ -1,0 +1,144 @@
+$ target/release/ladder --threads --cores 0,1
+# 2026-10-28T05:23:14Z, load average 2.62 3.35 3.29
+Predict first (the chapter's prediction):
+  --threads: one cache line each way at 50-80 ns a hop: 100-160 ns a round trip, 400-640 cycles at 4 GHz.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --threads: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 1,000,000 round trips after 100,000 of warm-up
+ladder --threads: n 1000000  p50 186 ns  p99 513 ns  p99.9 3907 ns  max 16.79 ms
+  p50 = 520 TSC ticks at 2.80 GHz = 744 cycles at the chapter's 4 GHz
+  system calls per round trip, the chapter's count: none (check with strace -c -f in a separate run)
+
+$ target/release/ladder --shm --cores 0,1
+# 2026-10-28T05:23:17Z, load average 2.62 3.35 3.29
+Predict first (the chapter's prediction):
+  --shm: the same line, and the kernel, having built the mapping, stays out: 100-200 ns, --threads within noise.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --shm: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 1,000,000 round trips after 100,000 of warm-up
+ladder --shm: n 1000000  p50 206 ns  p99 735 ns  p99.9 5075 ns  max 24.02 ms
+  p50 = 576 TSC ticks at 2.80 GHz = 824 cycles at the chapter's 4 GHz
+  system calls per round trip, the chapter's count: none (check with strace -c -f in a separate run)
+
+$ target/release/ladder --unix --iters 100000 --warmup 10000 --cores 0,1
+# 2026-10-28T05:23:20Z, load average 2.81 3.37 3.30
+Predict first (the chapter's prediction):
+  --unix: a system call and a copy each way and a wake-up at each end, no protocol: 5-15 us,
+  20,000-60,000 cycles at 4 GHz, 25-150 times --shm.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --unix: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100,000 round trips after 10,000 of warm-up
+ladder --unix: n 100000  p50 67.6 µs  p99 3.50 ms  p99.9 5.43 ms  max 12.81 ms
+  p50 = 189,232 TSC ticks at 2.80 GHz = 270,332 cycles at the chapter's 4 GHz
+  per round trip, client side: 0.00 empty polls (EAGAIN), 1.019 voluntary context switches
+  system calls per round trip, the chapter's count: a send and a receive a side (check with strace -c -f in a separate run)
+
+$ target/release/ladder --tcp-loopback --iters 100000 --warmup 10000 --cores 0,1
+# 2026-10-28T05:23:47Z, load average 3.37 3.46 3.33
+Predict first (the chapter's prediction):
+  --tcp-loopback: TCP's send path and protocol walk, run in software with no card: 10-30 us,
+  40,000-120,000 cycles at 4 GHz, about twice --unix.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --tcp-loopback: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100,000 round trips after 10,000 of warm-up
+ladder --tcp-loopback: n 100000  p50 79.5 µs  p99 3.65 ms  p99.9 5.69 ms  max 18.69 ms
+  p50 = 222,563 TSC ticks at 2.80 GHz = 317,948 cycles at the chapter's 4 GHz
+  per round trip, client side: 0.00 empty polls (EAGAIN), 0.999 voluntary context switches
+  system calls per round trip, the chapter's count: a send and a receive a side (check with strace -c -f in a separate run)
+
+$ target/release/ladder --unix --iters 100000 --warmup 10000 --cores none
+# 2026-10-28T05:24:16Z, load average 3.59 3.51 3.35
+Predict first (the chapter's prediction):
+  --unix: a system call and a copy each way and a wake-up at each end, no protocol: 5-15 us,
+  20,000-60,000 cycles at 4 GHz, 25-150 times --shm.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --unix: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100,000 round trips after 10,000 of warm-up
+ladder --unix: n 100000  p50 3837 ns  p99 8655 ns  p99.9 45.4 µs  max 5.14 ms
+  p50 = 10,743 TSC ticks at 2.80 GHz = 15,348 cycles at the chapter's 4 GHz
+  per round trip, client side: 0.00 empty polls (EAGAIN), 0.950 voluntary context switches
+  system calls per round trip, the chapter's count: a send and a receive a side (check with strace -c -f in a separate run)
+
+$ target/release/ladder --tcp-loopback --iters 100000 --warmup 10000 --cores none
+# 2026-10-28T05:24:17Z, load average 3.59 3.51 3.35
+Predict first (the chapter's prediction):
+  --tcp-loopback: TCP's send path and protocol walk, run in software with no card: 10-30 us,
+  40,000-120,000 cycles at 4 GHz, about twice --unix.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --tcp-loopback: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100,000 round trips after 10,000 of warm-up
+ladder --tcp-loopback: n 100000  p50 6551 ns  p99 26.4 µs  p99.9 229.0 µs  max 5.44 ms
+  p50 = 18,342 TSC ticks at 2.80 GHz = 26,204 cycles at the chapter's 4 GHz
+  per round trip, client side: 0.00 empty polls (EAGAIN), 0.654 voluntary context switches
+  system calls per round trip, the chapter's count: a send and a receive a side (check with strace -c -f in a separate run)
+
+$ target/release/ladder --unix --spin --iters 100000 --warmup 10000 --cores 0,1
+# 2026-10-28T05:24:19Z, load average 3.70 3.53 3.36
+Predict first (the chapter's prediction):
+  The chapter gives no number for spinning on loopback: the two wake-ups go, the system
+  calls, the copies and (for TCP) the protocol walk stay, so expect well under the blocking rung.
+  Loopback and Unix sockets have no card's ring to poll: --busy-poll measures --spin here.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --unix --spin: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100,000 round trips after 10,000 of warm-up
+ladder --unix --spin: n 100000  p50 3537 ns  p99 26.2 µs  p99.9 12.03 ms  max 39.91 ms
+  p50 = 9,903 TSC ticks at 2.80 GHz = 14,148 cycles at the chapter's 4 GHz
+  per round trip, client side: 61.87 empty polls (EAGAIN), 0.000 voluntary context switches
+  system calls per round trip, the chapter's count: a send, one receive that returns data, and tens to a hundred that return EAGAIN, a side (check with strace -c -f in a separate run)
+
+$ target/release/ladder --tcp-loopback --spin --iters 100000 --warmup 10000 --cores 0,1
+# 2026-10-28T05:24:25Z, load average 3.81 3.56 3.37
+Predict first (the chapter's prediction):
+  The chapter gives no number for spinning on loopback: the two wake-ups go, the system
+  calls, the copies and (for TCP) the protocol walk stay, so expect well under the blocking rung.
+  Loopback and Unix sockets have no card's ring to poll: --busy-poll measures --spin here.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --tcp-loopback --spin: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100,000 round trips after 10,000 of warm-up
+ladder --tcp-loopback --spin: n 100000  p50 10.9 µs  p99 85.6 µs  p99.9 12.06 ms  max 24.10 ms
+  p50 = 30,483 TSC ticks at 2.80 GHz = 43,548 cycles at the chapter's 4 GHz
+  per round trip, client side: 120.18 empty polls (EAGAIN), 0.000 voluntary context switches
+  system calls per round trip, the chapter's count: a send, one receive that returns data, and tens to a hundred that return EAGAIN, a side (check with strace -c -f in a separate run)
+
+$ target/release/ladder --tcp-loopback --busy-poll --iters 100000 --warmup 10000 --cores 0,1
+# 2026-10-28T05:24:37Z, load average 3.99 3.61 3.39
+Predict first (the chapter's prediction):
+  The chapter gives no number for spinning on loopback: the two wake-ups go, the system
+  calls, the copies and (for TCP) the protocol walk stay, so expect well under the blocking rung.
+  Loopback and Unix sockets have no card's ring to poll: --busy-poll measures --spin here.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --tcp-loopback --busy-poll: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100,000 round trips after 10,000 of warm-up
+ladder --tcp-loopback --busy-poll: n 100000  p50 8139 ns  p99 64.1 µs  p99.9 12.08 ms  max 187.96 ms
+  p50 = 22,789 TSC ticks at 2.80 GHz = 32,556 cycles at the chapter's 4 GHz
+  per round trip, client side: 76.56 empty polls (EAGAIN), 0.000 voluntary context switches
+  TcpExtBusyPollRxPackets rose by 0 (0.00 a round trip, this box): zero means the driver or the path has no ring to poll
+  system calls per round trip, the chapter's count: a send, one receive that returns data, and tens to a hundred that return EAGAIN, a side (check with strace -c -f in a separate run)
+
+$ target/release/ladder --tcp 127.0.0.1 --iters 100000 --warmup 10000 --core 0
+# 2026-10-28T05:24:48Z, load average 4.15 3.65 3.41
+Predict first (the chapter's prediction):
+  --tcp <host>: each way a send of 2-5 us, under a microsecond through the switch and 6-22 us
+  from the wire to recv returning in a sleeping reader: about 17-55 us a round trip, the
+  ladder's 20-50 us (80,000-200,000 cycles at 4 GHz) and twice loopback.
+  Ratios: about 1 threads to processes, 25-150 up to a Unix socket, 2 up to loopback, 2 again to the second
+  machine, then about 3 down by busy-polling. Blocking rungs: p99 far above p50 (the wake-up varies);
+  spinning rungs: p99 within a few us of p50.
+ladder --tcp 127.0.0.1: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100,000 round trips after 10,000 of warm-up
+ladder --tcp 127.0.0.1: n 100000  p50 82.3 µs  p99 3.67 ms  p99.9 5.05 ms  max 10.49 ms
+  p50 = 230,448 TSC ticks at 2.80 GHz = 329,212 cycles at the chapter's 4 GHz
+  per round trip, client side: 0.00 empty polls (EAGAIN), 0.999 voluntary context switches
+  system calls per round trip, the chapter's count: a send and a receive a side (check with strace -c -f in a separate run)
+
+# the echo side's output, from: target/release/ladder --echo --port 9000 --core 1
+ladder --echo: listening on 0.0.0.0:9000, blocking reads; Ctrl-C to stop
+127.0.0.1:54894: 110,000 round trips served

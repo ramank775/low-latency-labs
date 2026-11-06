@@ -1,0 +1,34 @@
+Predict first (the chapter's prediction; write yours down before reading on):
+  the ranking ArrayBook, VecBook, TreeBook. ArrayBook at 2-5 ns, its p99 where the 1% that move
+  the cursor land, 5-20 ns; VecBook 20-60 ns to find a level, 120-360 ns to add or remove one;
+  TreeBook, its two best-price walks included, 160-500 ns on an existing level and 210-700 ns on
+  a new or emptied one. An ArrayBook max far above its p99 is the machine, not the structure.
+
+Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0-1; clocksource tsc
+TSC 2.800 GHz; two rdtsc reads back to back: p50 40 ticks, 14.3 ns, subtracted below
+replay: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+generated 2,000,000 updates, seed 7: 2000 opening the book, then deep 95.0%, best quantity 4.0%, best price moves 1.0%; prices 6811299..6813400
+2,000,000 updates; ArrayBook's window centred on the first mid 6812346; the first 100,000 applied unrecorded
+
+ArrayBook: 122.7 M updates/s untimed; top changed 49 per 1,000
+  apply, all       p50    1.71 p99    15.7 p99.9     127 max     78321 ns  (n 1,900,000)
+    top unchanged  p50    1.71 p99    12.7 p99.9     127 max     78321 ns  (n 1,805,304)
+    best quantity  p50    5.71 p99    15.7 p99.9     106 max     18033 ns  (n 75,663)
+    best moved     p50    14.7 p99    33.7 p99.9     195 max       461 ns  (n 19,033)
+  during the timed pass: 180 minor faults, 0 major, 0 voluntary and 0 involuntary context switches
+
+VecBook (preallocated): 4.4 M updates/s untimed; top changed 49 per 1,000
+  apply, all       p50    45.7 p99    5869 p99.9    8769 max   2420721 ns  (n 1,900,000)
+    top unchanged  p50    44.7 p99    5505 p99.9    8441 max   2420721 ns  (n 1,805,304)
+    best quantity  p50    51.7 p99    89.7 p99.9     304 max     84593 ns  (n 75,663)
+    best moved     p50    4345 p99   10761 p99.9   55505 max   1425393 ns  (n 19,033)
+  during the timed pass: 172 minor faults, 0 major, 0 voluntary and 2 involuntary context switches
+
+TreeBook: 10.3 M updates/s untimed; top changed 49 per 1,000
+  apply, all       p50    91.7 p99     249 p99.9     484 max    109297 ns  (n 1,900,000)
+    top unchanged  p50    92.7 p99     248 p99.9     481 max    109297 ns  (n 1,805,304)
+    best quantity  p50    66.7 p99     126 p99.9     310 max     67505 ns  (n 75,663)
+    best moved     p50     110 p99     347 p99.9     810 max     77745 ns  (n 19,033)
+  during the timed pass: 135 minor faults, 0 major, 0 voluntary and 2 involuntary context switches
+
+final tops agree: Top { bid: Some((6812355, 674)), ask: Some((6812360, 994)) }

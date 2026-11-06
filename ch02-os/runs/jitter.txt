@@ -1,0 +1,56 @@
+$ ./target/release/jitter
+jitter: rdtsc read back to back for 10 s, every gap recorded (Lab 2.1)
+Predict first (the chapter's prediction, before you measure): two rdtsc back to back are 25-40 reference ticks apart, 8-12 ns, so p50 and p99 sit there in all three runs and do not move.
+Predict first, unpinned (the chapter's prediction): the tick, device interrupts, the odd slice given to another process and migrations: hundreds to thousands of gaps over 1 µs per second, p99.99 possibly in the microseconds, max hundreds of microseconds to milliseconds
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: unpinned: may run on cores 0-1, started on 0
+tsc: 2.800 ticks/ns
+
+gaps: n 348,299,441 p50 17 p99 24 p99.9 56 p99.99 420 max 20,070,399 ns
+above 1 µs: 17,534 (1753.4/s); above 10 µs: 9,995 (999.5/s); above 100 µs: 1,127 (112.7/s)
+gaps that came out backwards (a move to a core whose TSC disagrees): 0
+allocations in the loop: 0
+ran for 10.00 s; on core 0 at the end
+deltas over the run:
+  /proc/interrupts core 0: LOC +2,704, RES +136, 49 virtio7-input.0 +20, CAL +6, TLB +6, 35 virtio9-input +1
+  LOC delta core 0: 2,704 (270/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: RCU +2,202, TIMER +533, SCHED +171, NET_RX +20
+  steal core 0: +70 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +2,548, RES +52, 50 virtio7-output.0 +20, CAL +6, TLB +6, 37 virtio1-req.0 +3, 32 virtio0-stats +2
+  LOC delta core 1: 2,548 (255/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +3,497, TIMER +1,059, SCHED +172, NET_RX +19, BLOCK +3
+  steal core 1: +160 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +1258, nr_migrations +0
+Write down: p50, p99.99, max, the count above 1 µs and the LOC delta for each of the three runs.
+
+$ taskset -c 1 ./target/release/jitter
+jitter: rdtsc read back to back for 10 s, every gap recorded (Lab 2.1)
+Predict first (the chapter's prediction, before you measure): two rdtsc back to back are 25-40 reference ticks apart, 8-12 ns, so p50 and p99 sit there in all three runs and do not move.
+Predict first, pinned (the chapter's prediction): migrations go; the tick stays: 250-1,000 gaps a second of 1-5 µs, matching the LOC delta, and a max of tens of microseconds when a kworker runs
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+core: pinned to core 1 by the mask it started with (taskset -c 1)
+tsc: 2.800 ticks/ns
+
+gaps: n 370,469,644 p50 13 p99 34 p99.9 94 p99.99 340 max 14,114,815 ns
+above 1 µs: 19,384 (1938.4/s); above 10 µs: 10,927 (1092.7/s); above 100 µs: 1,399 (139.9/s)
+gaps that came out backwards (a move to a core whose TSC disagrees): 0
+allocations in the loop: 0
+ran for 10.00 s; on core 1 at the end
+deltas over the run:
+  /proc/interrupts core 1: LOC +2,694, RES +61, 50 virtio7-output.0 +16, CAL +8, TLB +8, 32 virtio0-stats +2, 37 virtio1-req.0 +2
+  LOC delta core 1: 2,694 (269/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: RCU +2,166, TIMER +549, SCHED +170, NET_RX +16, BLOCK +2
+  steal core 1: +150 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +1222, nr_migrations +0
+Write down: p50, p99.99, max, the count above 1 µs and the LOC delta for each of the three runs.
+

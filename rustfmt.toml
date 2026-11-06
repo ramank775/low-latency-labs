@@ -1,0 +1,4 @@
+# The code is laid out as the chapters print it, one statement per printed line with its
+# trailing reason, so that a reader can follow a chapter's walk-through line by line.
+# rustfmt would re-break every one of those blocks; it is switched off on purpose.
+disable_all_formatting = true

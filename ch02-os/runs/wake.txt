@@ -1,0 +1,137 @@
+$ ./target/release/wake --cores 0,1 --iters 100000
+wake: two threads pass a token 100,000 times: spin, park, sleep (Lab 2.4)
+Predict first (the chapter's prediction, before you measure): spin moves one cache line each way, 50-100 ns a hop, a round trip of 100-200 ns. Park pays a futex, the reschedule interrupt, the far core's C-state exit and a scheduler pass: 3-10 µs a hop with C-states capped, 6-20 µs a round trip; without --c0 the p99 shows 100-200 µs hops out of C6. Sleep is bounded below by timer slack, 50-60 µs a hop, so a round trip above 100 µs whatever --c0 does; with --timerslack 1 the hop drops to a few microseconds and stops there.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+C-states: core 1 exposes no cpuidle states (in a VM the host decides; --c0 can change nothing here)
+timer slack: 50,000 ns by default for this thread
+clock: now() pair p50 13 ns, inside every round trip
+
+spin  round trip: n 100,000 p50 170 p99 252 p99.9 1,050 p99.99 55,263 max 12,017,663 ns
+      hop p50 85 ns; ping on core 0, pong on core 1; timer slack 50,000 / 50,000 ns; allocations 0
+      ping thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +4, nr_migrations +0
+      pong thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +6, nr_migrations +0
+park  round trip: n 100,000 p50 59,999 p99 3,520,511 p99.9 6,348,799 p99.99 8,667,135 max 11,968,511 ns
+      hop p50 29,999 ns; ping on core 0, pong on core 1; timer slack 50,000 / 50,000 ns; allocations 0; vs spin: p50 353x, p99 13970x
+      ping thread: voluntary_ctxt_switches +102694, nonvoluntary_ctxt_switches +7029, nr_migrations +0
+      pong thread: voluntary_ctxt_switches +101324, nonvoluntary_ctxt_switches +9243, nr_migrations +0
+(sleep: 100,000 round trips at the chapter's 100+ µs each: about 10 s)
+sleep round trip: n 100,000 p50 118,655 p99 3,098,623 p99.9 5,058,559 p99.99 7,061,503 max 9,863,167 ns
+      hop p50 59,327 ns; ping on core 0, pong on core 1; timer slack 50,000 / 50,000 ns; allocations 0; vs spin: p50 698x, p99 12296x
+      ping thread: voluntary_ctxt_switches +194792, nonvoluntary_ctxt_switches +128, nr_migrations +0
+      pong thread: voluntary_ctxt_switches +172516, nonvoluntary_ctxt_switches +77, nr_migrations +0
+deltas over the run:
+  /proc/interrupts core 0: LOC +201,801, CAL +108,938, RES +91,998, 49 virtio7-input.0 +688, TLB +147, 53 virtio8-tx +4, 35 virtio9-input +1
+  LOC delta core 0: 201,801 (5149/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: NET_RX +43,342, RCU +8,864, SCHED +5,848, TIMER +4,127, HRTIMER +1
+  steal core 0: +450 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +179,597, RES +131,709, CAL +62,288, 50 virtio7-output.0 +687, TLB +111, 37 virtio1-req.0 +30, 32 virtio0-stats +8, 52 virtio8-rx +2
+  LOC delta core 1: 179,597 (4582/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: NET_RX +43,329, RCU +10,785, SCHED +3,637, TIMER +2,528, BLOCK +30, TASKLET +12, HRTIMER +3
+  steal core 1: +360 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +297489, nonvoluntary_ctxt_switches +7161, nr_migrations +0
+Write down: the three round-trip p50s and p99s with and without --c0, and the ratio of each to the spin.
+
+$ ./target/release/wake --cores 0,1 --iters 100000 --c0
+wake: two threads pass a token 100,000 times: spin, park, sleep, --c0 (Lab 2.4)
+Predict first (the chapter's prediction, before you measure): spin moves one cache line each way, 50-100 ns a hop, a round trip of 100-200 ns. Park pays a futex, the reschedule interrupt, the far core's C-state exit and a scheduler pass: 3-10 µs a hop with C-states capped, 6-20 µs a round trip; without --c0 the p99 shows 100-200 µs hops out of C6. Sleep is bounded below by timer slack, 50-60 µs a hop, so a round trip above 100 µs whatever --c0 does; with --timerslack 1 the hop drops to a few microseconds and stops there.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+C-states: core 1 exposes no cpuidle states (in a VM the host decides; --c0 can change nothing here)
+--c0: holding /dev/cpu_dma_latency at 0 for the run
+timer slack: 50,000 ns by default for this thread
+clock: now() pair p50 16 ns, inside every round trip
+
+spin  round trip: n 100,000 p50 180 p99 228 p99.9 6,267 p99.99 257,663 max 12,230,655 ns
+      hop p50 90 ns; ping on core 0, pong on core 1; timer slack 50,000 / 50,000 ns; allocations 0
+      ping thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +53, nr_migrations +0
+      pong thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +333, nr_migrations +0
+park  round trip: n 100,000 p50 63,391 p99 3,938,303 p99.9 7,159,807 p99.99 9,076,735 max 13,008,895 ns
+      hop p50 31,695 ns; ping on core 0, pong on core 1; timer slack 50,000 / 50,000 ns; allocations 0; vs spin: p50 352x, p99 17273x
+      ping thread: voluntary_ctxt_switches +100918, nonvoluntary_ctxt_switches +9001, nr_migrations +0
+      pong thread: voluntary_ctxt_switches +103986, nonvoluntary_ctxt_switches +5743, nr_migrations +0
+(sleep: 100,000 round trips at the chapter's 100+ µs each: about 10 s)
+sleep round trip: n 100,000 p50 84,223 p99 4,018,175 p99.9 8,732,671 p99.99 13,598,719 max 35,717,119 ns
+      hop p50 42,111 ns; ping on core 0, pong on core 1; timer slack 50,000 / 50,000 ns; allocations 0; vs spin: p50 468x, p99 17624x
+      ping thread: voluntary_ctxt_switches +169401, nonvoluntary_ctxt_switches +20, nr_migrations +0
+      pong thread: voluntary_ctxt_switches +166315, nonvoluntary_ctxt_switches +32, nr_migrations +0
+deltas over the run:
+  /proc/interrupts core 0: LOC +176,670, RES +64,147, CAL +45,907, 49 virtio7-input.0 +516, TLB +143, 53 virtio8-tx +12, 35 virtio9-input +1
+  LOC delta core 0: 176,670 (4679/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: NET_RX +291,170, RCU +9,479, SCHED +3,015, TIMER +2,818, HRTIMER +19, TASKLET +2
+  steal core 0: +490 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +173,192, RES +77,516, CAL +33,076, 50 virtio7-output.0 +523, TLB +151, 37 virtio1-req.0 +15, 52 virtio8-rx +10, 32 virtio0-stats +7
+  LOC delta core 1: 173,192 (4587/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: NET_RX +291,159, RCU +9,326, TIMER +3,721, SCHED +2,602, BLOCK +15, TASKLET +3
+  steal core 1: +490 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +270323, nonvoluntary_ctxt_switches +9075, nr_migrations +1
+Write down: the three round-trip p50s and p99s with and without --c0, and the ratio of each to the spin.
+
+$ ./target/release/wake --cores 0,1 --iters 100000 --sleep --timerslack 1
+wake: two threads pass a token 100,000 times: sleep, --timerslack 1 (Lab 2.4)
+Predict first (the chapter's prediction, before you measure): spin moves one cache line each way, 50-100 ns a hop, a round trip of 100-200 ns. Park pays a futex, the reschedule interrupt, the far core's C-state exit and a scheduler pass: 3-10 µs a hop with C-states capped, 6-20 µs a round trip; without --c0 the p99 shows 100-200 µs hops out of C6. Sleep is bounded below by timer slack, 50-60 µs a hop, so a round trip above 100 µs whatever --c0 does; with --timerslack 1 the hop drops to a few microseconds and stops there.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+C-states: core 1 exposes no cpuidle states (in a VM the host decides; --c0 can change nothing here)
+timer slack: 50,000 ns by default for this thread; set to 1 ns on both threads
+clock: now() pair p50 13 ns, inside every round trip
+
+sleep round trip: n 100,000 p50 42,591 p99 4,751,359 p99.9 12,132,351 p99.99 18,710,527 max 24,150,015 ns
+      hop p50 21,295 ns; ping on core 0, pong on core 1; timer slack 1 / 1 ns; allocations 0
+      ping thread: voluntary_ctxt_switches +123, nonvoluntary_ctxt_switches +37942, nr_migrations +0
+      pong thread: voluntary_ctxt_switches +207, nonvoluntary_ctxt_switches +31317, nr_migrations +0
+deltas over the run:
+  /proc/interrupts core 0: LOC +269,427, RES +54,088, 49 virtio7-input.0 +123, CAL +72, TLB +64, 53 virtio8-tx +2, 33 virtio0-reporting_vq +1
+  LOC delta core 0: 269,427 (13694/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: NET_RX +55,643, RCU +4,829, TIMER +1,445, SCHED +585
+  steal core 0: +240 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: LOC +241,934, RES +53,986, 50 virtio7-output.0 +124, CAL +92, TLB +60, 37 virtio1-req.0 +6, 32 virtio0-stats +4, 52 virtio8-rx +1
+  LOC delta core 1: 241,934 (12297/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: NET_RX +55,644, RCU +5,069, TIMER +1,887, SCHED +608, BLOCK +6, HRTIMER +4, TASKLET +3
+  steal core 1: +300 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +124, nonvoluntary_ctxt_switches +37945, nr_migrations +0
+Write down: the three round-trip p50s and p99s with and without --c0, and the ratio of each to the spin.
+
+$ ./target/release/wake --iters 10000 --spin
+wake: two threads pass a token 10,000 times: spin (Lab 2.4)
+Predict first (the chapter's prediction, before you measure): spin moves one cache line each way, 50-100 ns a hop, a round trip of 100-200 ns. Park pays a futex, the reschedule interrupt, the far core's C-state exit and a scheduler pass: 3-10 µs a hop with C-states capped, 6-20 µs a round trip; without --c0 the p99 shows 100-200 µs hops out of C6. Sleep is bounded below by timer slack, 50-60 µs a hop, so a round trip above 100 µs whatever --c0 does; with --timerslack 1 the hop drops to a few microseconds and stops there.
+kernel: 6.18.44-fc-v180
+cmdline: mitigations=auto,no_guest_host,no_guest_guest deferred_init=lazy dhash_entries=131072 ihash_entries=65536 console=ttyS0 reboot=k panic=1 nomodule random.trust_cpu=1 ipv6.disable=1 swiotlb=noforce psi=1 rdinit=/process_api -- --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-vsock-port 2024 --log-vsock-port 5002
+machine: a VM guest (cpuinfo has the hypervisor flag): the host's tick, scheduler and interrupts are invisible here except as steal
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz; online 0-1
+clocksource: tsc; CONFIG_HZ: unknown (no /boot/config-6.18.44-fc-v180; the LOC delta of a busy core gives it)
+isolated: none; nohz_full: not supported by this kernel; THP enabled=madvise defrag=madvise
+warning: core 3 is not available here (this process may use 0-1): the ping thread runs UNPINNED; pass --cores with two of 0-1
+warning: core 4 is not available here (this process may use 0-1): the pong thread runs UNPINNED; pass --cores with two of 0-1
+C-states: core 4 exposes no cpuidle states (in a VM the host decides; --c0 can change nothing here)
+timer slack: 50,000 ns by default for this thread
+clock: now() pair p50 13 ns, inside every round trip
+
+spin  round trip: n 10,000 p50 276 p99 355 p99.9 4,887 p99.99 155,135 max 8,204,287 ns
+      hop p50 138 ns; ping unpinned, pong unpinned; timer slack 50,000 / 50,000 ns; allocations 0
+      ping thread: voluntary_ctxt_switches +0, nonvoluntary_ctxt_switches +18300, nr_migrations +0
+      pong thread: voluntary_ctxt_switches +1, nonvoluntary_ctxt_switches +18502, nr_migrations +1
+deltas over the run:
+  /proc/interrupts core 0: RES +34,619, LOC +2,792, 49 virtio7-input.0 +84, 33 virtio0-reporting_vq +1, CAL +1, TLB +1
+  LOC delta core 0: 2,792 (269/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 0: NET_RX +35,978, RCU +3,269, TIMER +1,235, SCHED +177
+  steal core 0: +130 ms (the host's share of this guest's time)
+  /proc/interrupts core 1: RES +34,673, LOC +2,680, 50 virtio7-output.0 +85, CAL +8, TLB +8, 37 virtio1-req.0 +5, 32 virtio0-stats +2
+  LOC delta core 1: 2,680 (258/s: HZ on a busy core that never sleeps; each timed wake-up adds one)
+  /proc/softirqs   core 1: NET_RX +35,972, RCU +2,519, TIMER +497, SCHED +184, BLOCK +5
+  steal core 1: +100 ms (the host's share of this guest's time)
+  this thread: voluntary_ctxt_switches +1, nonvoluntary_ctxt_switches +18300, nr_migrations +0
+Write down: the three round-trip p50s and p99s with and without --c0, and the ratio of each to the spin.
+

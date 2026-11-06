@@ -1,0 +1,121 @@
+$ RUSTFLAGS="--cfg loom" cargo test --release -p ch03-concurrency --target-dir target/loom -- --nocapture --test-threads 1
+     Running unittests src/lib.rs (target/loom/release/deps/ch03_concurrency-8641c786be67421a)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/bin/counter.rs (target/loom/release/deps/counter-1be3bed6a34c83ff)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/bin/message_passing.rs (target/loom/release/deps/message_passing-c3c13656467fe5ba)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/bin/pingpong.rs (target/loom/release/deps/pingpong-36c2d36f6e27fafe)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/bin/spsc.rs (target/loom/release/deps/spsc-4e8365377b2317b2)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/freelist_loom.rs (target/loom/release/deps/freelist_loom-cf6cd44c9936c0c3)
+test tagged_free_list_no_aba ... TaggedFreeList: passed: 334 executions explored in 17.69ms, LOOM_MAX_PREEMPTIONS 3
+test untagged_free_list_aba - should panic ... 
+thread 'untagged_free_list_aba' (12621) panicked at ch03-concurrency/tests/freelist_loom.rs:58:5:
+assertion `left == right` failed: a slot owned twice, or lost: owners per slot [1, 2, 1]
+  left: [1, 2, 1]
+ right: [1, 1, 1]
+FreeList, untagged (expected to fail: ABA): FAILED in execution 17, after 14.80ms, LOOM_MAX_PREEMPTIONS 3
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+     Running tests/mp_loom.rs (target/loom/release/deps/mp_loom-326c92d7a0ac521c)
+test flag_publishes_data ... ok
+test flag_relaxed_shows_data_0 - should panic ... 
+thread 'flag_relaxed_shows_data_0' (12624) panicked at ch03-concurrency/tests/mp_loom.rs:83:13:
+assertion `left == right` failed: flag is 1 and data is 0
+  left: 0
+ right: 42
+flag_publishes_data, both Relaxed (expected to fail): FAILED in execution 3, after 13.43ms, LOOM_MAX_PREEMPTIONS 3
+test mp_relaxed_reads_stale - should panic ... 
+thread 'mp_relaxed_reads_stale' (12625) panicked at ch03-concurrency/tests/mp_loom.rs:54:9:
+stale read: flag 1, data 0
+message passing, Relaxed (expected to fail): FAILED in execution 14, after 1.80ms, LOOM_MAX_PREEMPTIONS 3
+test mp_release_acquire_never_stale ... message passing, Release/Acquire: passed: 331 executions explored in 12.51ms, LOOM_MAX_PREEMPTIONS 3
+test sb_fence_seqcst_never_both_zero ... store buffering, fence(SeqCst): passed: 13 executions explored in 530.23µs, LOOM_MAX_PREEMPTIONS 3
+test sb_release_acquire_both_zero - should panic ... 
+thread 'sb_release_acquire_both_zero' (12628) panicked at ch03-concurrency/tests/mp_loom.rs:104:5:
+both loads returned 0: store buffering
+store buffering, Release/Acquire (expected to fail): FAILED in execution 1, after 896.70µs, LOOM_MAX_PREEMPTIONS 3
+test sb_seqcst_accesses_false_alarm - should panic ... 
+thread 'sb_seqcst_accesses_false_alarm' (12629) panicked at ch03-concurrency/tests/mp_loom.rs:104:5:
+both loads returned 0: store buffering
+store buffering, SeqCst accesses (loom's false alarm): FAILED in execution 1, after 575.46µs, LOOM_MAX_PREEMPTIONS 3
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+     Running tests/seqlock.rs (target/loom/release/deps/seqlock-fae44a08794ded41)
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/spsc_loom.rs (target/loom/release/deps/spsc_loom-ee544d4ba3b228da)
+test ring_16_slots_18_items ... ignored, minutes, not seconds: run with LOOM_MAX_PREEMPTIONS=2 and -- --ignored
+test ring_2_slots_3_items ... Ring<2>, K = 3: passed: 473 executions explored in 20.03ms, LOOM_MAX_PREEMPTIONS 3
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test ch03-concurrency/src/atomics.rs - atomics (line 26) ... ok
+test ch03-concurrency/src/atomics.rs - atomics (line 7) - compile fail ... error[E0499]: cannot borrow `plain` as mutable more than once at a time
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.93s
+
+$ RUSTFLAGS="--cfg loom --cfg relaxed_head_store" cargo test --release -p ch03-concurrency --test spsc_loom -- --nocapture
+running 2 tests
+test ring_16_slots_18_items ... ignored, minutes, not seconds: run with LOOM_MAX_PREEMPTIONS=2 and -- --ignored
+thread 'ring_2_slots_3_items' (13255) panicked at /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/loom-0.7.2/src/rt/location.rs:115:9:
+Causality violation: Concurrent read and write accesses.
+    created: ch03-concurrency/src/spsc.rs:47:44
+       read: thread #0 @ ch03-concurrency/src/spsc.rs:89:56
+      write: thread #1 @ ch03-concurrency/src/spsc.rs:66:48
+Ring<2>, K = 3: FAILED in execution 1, after 228.24µs, LOOM_MAX_PREEMPTIONS 3
+test ring_2_slots_3_items ... FAILED
+failures:
+failures:
+    ring_2_slots_3_items
+test result: FAILED. 0 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p ch03-concurrency --test spsc_loom`
+
+$ RUSTFLAGS="--cfg loom --cfg relaxed_tail_load" cargo test --release -p ch03-concurrency --test spsc_loom -- --nocapture
+running 2 tests
+test ring_16_slots_18_items ... ignored, minutes, not seconds: run with LOOM_MAX_PREEMPTIONS=2 and -- --ignored
+thread 'ring_2_slots_3_items' (13829) panicked at /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/loom-0.7.2/src/rt/location.rs:115:9:
+Causality violation: Concurrent read and write accesses to `UnsafeCell`.
+    created: ch03-concurrency/src/spsc.rs:47:44
+       read: thread #0 @ ch03-concurrency/src/spsc.rs:89:56
+      write: thread #1 @ ch03-concurrency/src/spsc.rs:66:48
+Ring<2>, K = 3: FAILED in execution 1, after 184.94µs, LOOM_MAX_PREEMPTIONS 3
+test ring_2_slots_3_items ... FAILED
+failures:
+failures:
+    ring_2_slots_3_items
+test result: FAILED. 0 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p ch03-concurrency --test spsc_loom`
+
+
+$ LOOM_MAX_PREEMPTIONS=2 RUSTFLAGS="--cfg loom" cargo test --release -p ch03-concurrency --test spsc_loom -- --ignored --nocapture
+# stopped by `timeout 1800` (a 30-minute cap) on this 2-vCPU VM: not finished, no failure found
+running 1 test
+Ring<16>, K = 18: 1000000 executions so far, 61s
+Ring<16>, K = 18: 2000000 executions so far, 115s
+Ring<16>, K = 18: 3000000 executions so far, 179s
+Ring<16>, K = 18: 4000000 executions so far, 233s
+Ring<16>, K = 18: 5000000 executions so far, 285s
+Ring<16>, K = 18: 6000000 executions so far, 338s
+Ring<16>, K = 18: 7000000 executions so far, 389s
+Ring<16>, K = 18: 8000000 executions so far, 439s
+Ring<16>, K = 18: 9000000 executions so far, 492s
+Ring<16>, K = 18: 10000000 executions so far, 544s
+Ring<16>, K = 18: 11000000 executions so far, 604s
+Ring<16>, K = 18: 12000000 executions so far, 663s
+Ring<16>, K = 18: 13000000 executions so far, 729s
+Ring<16>, K = 18: 14000000 executions so far, 816s
+Ring<16>, K = 18: 15000000 executions so far, 891s
+Ring<16>, K = 18: 16000000 executions so far, 973s
+Ring<16>, K = 18: 17000000 executions so far, 1026s
+Ring<16>, K = 18: 18000000 executions so far, 1077s
+Ring<16>, K = 18: 19000000 executions so far, 1129s
+Ring<16>, K = 18: 20000000 executions so far, 1183s
+Ring<16>, K = 18: 21000000 executions so far, 1248s
+Ring<16>, K = 18: 22000000 executions so far, 1307s
+Ring<16>, K = 18: 23000000 executions so far, 1359s
+Ring<16>, K = 18: 24000000 executions so far, 1415s
+Ring<16>, K = 18: 25000000 executions so far, 1466s
+Ring<16>, K = 18: 26000000 executions so far, 1521s
+Ring<16>, K = 18: 27000000 executions so far, 1573s
+Ring<16>, K = 18: 28000000 executions so far, 1634s
+Ring<16>, K = 18: 29000000 executions so far, 1692s
+Ring<16>, K = 18: 30000000 executions so far, 1747s
+Ring<16>, K = 18: 31000000 executions so far, 1796s
+Ring<16>, K = 18: stopped after 31050000 executions, 1799s

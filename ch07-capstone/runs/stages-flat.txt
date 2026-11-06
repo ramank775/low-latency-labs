@@ -1,0 +1,45 @@
+capstone run
+  mode flat, book array, queue spsc, stall-every 0 ms, build stages (t0 t1 t2 t3 t4)
+  file target/replay.bin (200,000 records), replayed 200,000, warm-up 100,000 (seq 1..100,000 left out), binary fnv64 b2d022bd83e38954
+  machine: Intel(R) Xeon(R) Processor @ 2.10GHz; kernel 6.18.44-fc-v180; 2 CPUs allowed; clocksource tsc; governor n/a; isolated []; nohz_full [n/a]
+  clock: TSC 2100.0 MHz by calibrate(); back-to-back now() p50 40 ticks = 19.0 ns, in every interval below
+  cores: feed core 0, strategy core 1, gateway unpinned; memory locked (mlockall); replay mlocked, 2,735 pages touched
+  book window base 6779577 ticks, 65536 levels a side
+
+throughput: 200,000 updates in 0.053 s, 3,742,821 a second; 6,537 batches (decisions-file lines), 30.60 messages a batch; 559 orders through the gateway
+
+latency, ns, messages after warm-up:
+               count       p50       p99     p99.9         max   max at seq
+  decode     100,000        20       202       303      17,295   126,424
+  hop        100,000   134,143 28,246,015 28,295,167  28,295,167   148,678
+  think      100,000    41,919   172,287 28,180,479  28,180,479   146,025
+  total      100,000   178,303 28,360,703 28,442,623  28,442,623   148,655
+  out_hop        179 2,412,543 3,923,967 3,923,967   3,923,967   -
+
+worst 100 total (ns@seq), slowest first:
+  28,442,404@148655  28,442,358@148656  28,442,313@148657  28,442,268@148658  28,442,222@148659  28,442,177@148660  28,442,131@148661  28,442,085@148662
+  28,442,038@148663  28,441,809@148664  28,441,764@148665  28,441,718@148666  28,441,673@148667  28,441,627@148668  28,441,575@148669  28,441,530@148670
+  28,441,484@148671  28,441,438@148672  28,441,393@148673  28,441,348@148674  28,441,302@148675  28,441,257@148676  28,441,211@148677  28,441,165@148678
+  28,441,119@148679  28,441,073@148680  28,441,029@148681  28,440,983@148682  28,440,937@148683  28,440,892@148684  28,440,845@148685  28,440,798@148686
+  28,440,744@148687  28,440,687@148688  28,440,642@148689  28,440,596@148690  28,440,551@148691  28,440,505@148692  28,440,433@148693  28,440,388@148694
+  28,440,342@148695  28,440,297@148696  28,440,252@148697  28,440,206@148698  28,440,160@148699  28,440,115@148700  28,440,069@148701  28,440,024@148702
+  28,439,978@148703  28,439,933@148704  28,439,887@148705  28,439,842@148706  28,439,796@148707  28,439,751@148708  28,439,704@148709  28,439,649@148710
+  28,439,596@148711  28,439,552@148712  28,439,506@148713  28,439,460@148714  28,439,414@148715  28,439,370@148716  28,439,308@148717  28,439,262@148718
+  28,439,217@148719  28,439,172@148720  28,439,125@148721  28,439,080@148722  28,439,009@148723  28,438,963@148724  28,438,917@148725  28,438,871@148726
+  28,438,825@148727  28,438,770@148728  28,438,724@148729  28,438,678@148730  28,438,624@148731  28,438,578@148732  28,438,517@148733  28,438,472@148734
+  28,438,387@148735  28,438,326@148736  28,438,280@148737  28,438,235@148738  28,438,190@148739  28,438,144@148740  28,438,097@148741  28,438,052@148742
+  28,437,992@148743  28,437,947@148744  28,437,901@148745  28,437,855@148746  28,437,794@148747  28,437,749@148748  28,437,702@148749  28,437,656@148750
+  28,437,587@148751  28,437,515@148752  28,437,471@148753  28,437,425@148754
+
+must read zero:
+  sequence gaps            0   (handler state at the end: Live)
+  orders dropped           0   (output ring full)
+  backwards intervals      0   (a later stamp below an earlier one: two cores' counters disagree)
+  decisions not logged     0   (log full)
+  undecodable records      0
+  allocations after warm-up 0   (frees 22; counting allocator, every thread)
+  feed     core 0, on cpu 0 at warm-up, 0 at the end: page faults 0 (major 0), context switches 0 (voluntary 0, involuntary 0), migrations 0
+  strategy core 1, on cpu 1 at warm-up, 1 at the end: page faults 0 (major 0), context switches 3 (voluntary 0, involuntary 3), migrations 0
+  gateway  unpinned, on cpu 1 at warm-up, 1 at the end: page faults 0 (major 0), context switches 2 (voluntary 0, involuntary 2), migrations 0
+
+feed: 0 messages released more than 1 us after their tick; waited on a full queue 2,641,352 times

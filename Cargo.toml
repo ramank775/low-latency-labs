@@ -1,0 +1,15 @@
+[workspace]
+members = ["ch01-hardware", "ch02-os", "ch03-concurrency", "ch04-network", "ch05-structures", "ch06-book", "ch07-capstone"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.92"
+license = "MIT OR Apache-2.0"
+
+# Optimised, with line tables so perf can name inlined functions (the finding-where-the-time-goes
+# section), and one codegen unit so the hot loop is compiled as one piece.
+[profile.release]
+debug = 1
+lto = "thin"
+codegen-units = 1

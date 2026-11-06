@@ -1,0 +1,28 @@
+Predict first (the chapter's prediction; write yours down before reading on):
+  the copy re-base is a 1 MB memmove, 50-150 µs (50-150 budgets) whatever the step; the ring's is
+  a new origin and the cleared slots, near zero for a step of a few levels; a rebuild clears the
+  whole window and applies every level, and in production waits 70-200 ms for the snapshot. Write
+  down which of the three wins for a step and which for a jump of the whole window.
+
+Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0-1; clocksource tsc
+TSC 2.800 GHz; two rdtsc reads back to back: p50 39 ticks, 13.9 ns, subtracted below
+rebase: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+the book: 200,000 updates, 963 bid and 901 ask levels, window 6779578..6845114
+
+1. one re-base, timed, 500 times each way alternately; µs:
+  a step of 4 levels:
+    copy (memmove)  p50      226 p99      852 max     1036 µs  (n 500)
+    ring            p50     0.12 p99     0.36 max     4.37 µs  (n 500)
+    rebuild         p50     41.8 p99      119 max      403 µs  (n 500)
+    levels of the venue's book inside the new window that each lacks: copy 0, ring 0, rebuild 0
+  a jump of the whole window:
+    copy (memmove)  p50     40.7 p99      108 max     2075 µs  (n 500)
+    ring            p50     41.3 p99      105 max      510 µs  (n 500)
+    rebuild         p50     60.1 p99      133 max      253 µs  (n 500)
+    levels of the venue's book inside the new window that each lacks: copy 1864, ring 1864, rebuild 0 (the price jumped a whole window: only a snapshot knows the new levels)
+
+2. A price that walks out: 1,000,000 updates, the best bid from 6812346 to 6946270, 133,924 ticks, against a window of 65,536 (±32,768); re-centred on the mid when a best comes within 16384 levels of an edge:
+    copy re-base  8 re-bases: p50 112 p99 594 max 594 µs
+    ring re-base  8 re-bases: p50 28.6 p99 155 max 155 µs
+    updates after which the top differed from the venue's: plain array 753,789, copy re-base 0, ring 0
+    venue levels missing from the final window (holes from levels that entered unseen): copy 0, ring 0

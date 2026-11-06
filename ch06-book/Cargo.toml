@@ -1,0 +1,33 @@
+[package]
+name = "ch06-book"
+version = "0.1.0"
+description = "The book chapter: three order books, the sequence check, the feed handler, the quoter"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+# The chapter's four binaries, from the files its crate layout names. Cargo
+# forbids a binary called `build` (its own build directory has that name), and
+# ch04-network already has a `replay` (both would land in target/release/replay),
+# so those two are book-build and book-replay; break and rebase keep their names.
+autobins = false
+
+[[bin]]
+name = "book-build"
+path = "src/bin/build.rs"
+
+[[bin]]
+name = "book-replay"
+path = "src/bin/replay.rs"
+
+[[bin]]
+name = "break"
+path = "src/bin/break.rs"
+
+[[bin]]
+name = "rebase"
+path = "src/bin/rebase.rs"
+
+[dependencies]
+ch05-structures = { path = "../ch05-structures" }
+# The lab's fixed-memory histograms; the clock and pinning come from ch05_structures::lab.
+hdrhistogram = { version = "7", default-features = false }

@@ -1,0 +1,74 @@
+$ target/release/nagle --loopback --requests 100 --warmup 20
+# 2026-10-28T05:22:48Z, load average 3.13 3.51 3.34
+Predict first (the chapter's prediction):
+  default: the header leaves at once, nothing being in flight; Nagle holds the body, the header being
+  unacknowledged. The server holds half a request and has no reply to carry an ACK, so it waits out its
+  40 ms delayed-ACK timer: about 40 ms a request and 40 s for the 1,000, on loopback and across a switch alike.
+  System calls a request: two sendto and one recvfrom.
+nagle default (two writes, Nagle on) to 127.0.0.1:34015: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100 requests after 20 of warm-up
+the 100 requests took 4423.54 ms
+nagle default (two writes, Nagle on): n 100  p50 44.01 ms  p99 48.33 ms  p99.9 49.32 ms  max 49.32 ms
+  per request, box-wide (on loopback both ends are this box): TcpExtDelayedACKs 1.00, TcpExtTCPAutoCorking 0.00, TcpOutSegs 6.19 (data and ACKs, both directions), TcpRetransSegs 0.00
+
+$ target/release/nagle --loopback --nodelay
+# 2026-10-28T05:22:53Z, load average 2.96 3.46 3.33
+Predict first (the chapter's prediction):
+  With any fix a request is one ordinary round trip, 10-30 us on loopback and 20-50 us across a switch:
+  the 1,000 take 10-50 ms, eight hundred to four thousand times less than the default.
+  --nodelay: two segments about a microsecond apart (a few more if autocorking holds the body for the
+  header's transmit completion); a server that wakes on the header reads 4 bytes and sleeps again, so a
+  p50 a microsecond or two above --one-write's and a p99 up to a wake-up above it. Two sendto, one recvfrom.
+nagle --nodelay to 127.0.0.1:34263: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 1,000 requests after 100 of warm-up
+the 1,000 requests took 13.53 ms
+nagle --nodelay: n 1000  p50 10.3 µs  p99 52.9 µs  p99.9 153.0 µs  max 675.8 µs
+  per request, box-wide (on loopback both ends are this box): TcpExtDelayedACKs 0.00, TcpExtTCPAutoCorking 0.00, TcpOutSegs 4.00 (data and ACKs, both directions), TcpRetransSegs 0.00
+
+$ target/release/nagle --loopback --one-write
+# 2026-10-28T05:22:53Z, load average 2.89 3.44 3.32
+Predict first (the chapter's prediction):
+  With any fix a request is one ordinary round trip, 10-30 us on loopback and 20-50 us across a switch:
+  the 1,000 take 10-50 ms, eight hundred to four thousand times less than the default.
+  --one-write: one segment, and nothing in flight when it is written (the last echo acknowledged every
+  byte), so it leaves at once. System calls a request: one writev and one recvfrom.
+nagle --one-write to 127.0.0.1:40985: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 1,000 requests after 100 of warm-up
+the 1,000 requests took 10.95 ms
+nagle --one-write: n 1000  p50 6815 ns  p99 120.8 µs  p99.9 295.2 µs  max 325.6 µs
+  per request, box-wide (on loopback both ends are this box): TcpExtDelayedACKs 0.00, TcpExtTCPAutoCorking 0.00, TcpOutSegs 2.00 (data and ACKs, both directions), TcpRetransSegs 0.00
+
+$ target/release/nagle --loopback --cork
+# 2026-10-28T05:22:54Z, load average 2.89 3.44 3.32
+Predict first (the chapter's prediction):
+  With any fix a request is one ordinary round trip, 10-30 us on loopback and 20-50 us across a switch:
+  the 1,000 take 10-50 ms, eight hundred to four thousand times less than the default.
+  --cork: the same single segment as --one-write for three more system calls, two setsockopt and a
+  second send, a microsecond or two a request: two setsockopt, two sendto and one recvfrom.
+nagle --cork to 127.0.0.1:46027: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 1,000 requests after 100 of warm-up
+the 1,000 requests took 8.06 ms
+nagle --cork: n 1000  p50 7263 ns  p99 18.1 µs  p99.9 60.0 µs  max 103.1 µs
+  per request, box-wide (on loopback both ends are this box): TcpExtDelayedACKs 0.00, TcpExtTCPAutoCorking 0.00, TcpOutSegs 2.00 (data and ACKs, both directions), TcpRetransSegs 0.00
+
+$ target/release/nagle --loopback --quickack --requests 100 --warmup 20
+# 2026-10-28T05:22:54Z, load average 2.89 3.44 3.32
+Predict first (the chapter's prediction):
+  default: the header leaves at once, nothing being in flight; Nagle holds the body, the header being
+  unacknowledged. The server holds half a request and has no reply to carry an ACK, so it waits out its
+  40 ms delayed-ACK timer: about 40 ms a request and 40 s for the 1,000, on loopback and across a switch alike.
+  System calls a request: two sendto and one recvfrom.
+  (server --quickack: the chapter's pitfall; expect the default's stall to vanish)
+nagle default (two writes, Nagle on), server --quickack to 127.0.0.1:39965: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 100 requests after 20 of warm-up
+the 100 requests took 1.30 ms
+nagle default (two writes, Nagle on), server --quickack: n 100  p50 11.5 µs  p99 42.5 µs  p99.9 51.6 µs  max 51.6 µs
+  per request, box-wide (on loopback both ends are this box): TcpExtDelayedACKs 0.00, TcpExtTCPAutoCorking 0.00, TcpOutSegs 5.00 (data and ACKs, both directions), TcpRetransSegs 0.00
+
+$ target/release/nagle --host 127.0.0.1 --one-write
+# 2026-10-28T05:22:55Z, load average 2.89 3.44 3.32
+Predict first (the chapter's prediction):
+  With any fix a request is one ordinary round trip, 10-30 us on loopback and 20-50 us across a switch:
+  the 1,000 take 10-50 ms, eight hundred to four thousand times less than the default.
+  --one-write: one segment, and nothing in flight when it is written (the last echo acknowledged every
+  byte), so it leaves at once. System calls a request: one writev and one recvfrom.
+nagle --one-write to 127.0.0.1:9001: kernel 6.18.44-fc-v180, TSC 2.800 GHz, 2 cores online, this process may use [0, 1], 1,000 requests after 100 of warm-up
+the 1,000 requests took 12.47 ms
+nagle --one-write: n 1000  p50 10.8 µs  p99 42.6 µs  p99.9 109.1 µs  max 806.4 µs
+  per request, box-wide (on loopback both ends are this box): TcpExtDelayedACKs 0.00, TcpExtTCPAutoCorking 0.00, TcpOutSegs 2.00 (data and ACKs, both directions), TcpRetransSegs 0.00
+

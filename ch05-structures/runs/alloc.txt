@@ -1,0 +1,33 @@
+Predict first (the chapter's prediction; write yours down before reading on):
+  the ring allocates nothing after warm-up: the two counts are equal.
+  channel() allocates a block for every 31 items, about 3.2 million over 100 million.
+  sync_channel(4096), whose buffer is allocated once: write down whether it passes.
+
+Intel(R) Xeon(R) Processor @ 2.80GHz; CPUs online 0-1; clocksource tsc
+4,000,000 items a queue; the count starts after 1,000,000 items, both threads running
+
+spsc ring, padded
+  producer: NOT pinned: core 2 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  consumer: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  3,000,000 items after warm-up, 0.7 M items/s
+    per item, by block of 4096: p50    1952 p99    2938 p99.9    3904 max      3904 ns  (n 731)
+  between warm-up and the last item: 0 allocations, 0 frees
+  assert_eq!(count after warm-up, count at the end): holds
+
+mpsc::channel()
+  producer: NOT pinned: core 2 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  consumer: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  3,000,000 items after warm-up, 8.5 M items/s
+    per item, by block of 4096: p50    26.7 p99    1663 p99.9    2876 max      2876 ns  (n 731)
+  between warm-up and the last item: 95,207 allocations, 96,774 frees, one allocation per 31.5 items
+  assert_eq!(count after warm-up, count at the end): FAILS: 95,207 allocations and 96,774 frees
+
+mpsc::sync_channel(4096)
+  producer: NOT pinned: core 2 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  consumer: NOT pinned: core 3 refused (Invalid argument (os error 22)); this machine has 0-1 online (lscpu -e); running unpinned, so every percentile above the p50 is partly the scheduler's
+  3,000,000 items after warm-up, 0.6 M items/s
+    per item, by block of 4096: p50    1953 p99    2946 p99.9    3916 max      3916 ns  (n 731)
+  between warm-up and the last item: 0 allocations, 0 frees
+  assert_eq!(count after warm-up, count at the end): holds
+
+exit status: 0

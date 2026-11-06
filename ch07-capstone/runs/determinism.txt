@@ -1,0 +1,20 @@
+# Decisions files joined on sequence number, each against paced (array book, spsc queue, headline build).
+# Replay: gen --records 200000 --seed 7 --out target/replay.bin; every run: --file target/replay.bin
+# --feed-core 0 --strategy-core 1 --gateway-core none (this machine has 2 CPUs).
+# The join and the comparison are the README's exercise 4: join -j1 on field 1, compare the other six.
+
+paced vs paced-again              42989 joined, 0 differ   (94517 and 93503 decisions)
+paced vs paced-tree               47211 joined, 0 differ   (94517 and 90539 decisions)
+paced vs paced-vec                42736 joined, 0 differ   (94517 and 91026 decisions)
+paced vs paced-mutex              51711 joined, 0 differ   (94517 and 109471 decisions)
+paced vs paced-mpsc               45737 joined, 0 differ   (94517 and 94981 decisions)
+paced vs paced-stall-1000         49358 joined, 0 differ   (94517 and 92923 decisions)
+paced vs flat                     19353 joined, 0 differ   (94517 and 40176 decisions)
+paced vs stages-paced             46555 joined, 0 differ   (94517 and 90178 decisions)
+paced vs stages-flat              2943 joined, 0 differ   (94517 and 6537 decisions)
+paced vs stages-paced-stall-1000  45903 joined, 0 differ   (94517 and 88277 decisions)
+
+# Why the join and not cmp: the same files compared byte for byte, because batches close at different updates.
+cmp paced.decisions paced-again.decisions    differ
+cmp paced.decisions paced-tree.decisions     differ
+cmp paced.decisions paced-mutex.decisions    differ
