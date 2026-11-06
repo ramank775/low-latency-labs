@@ -48,7 +48,7 @@ WebSocket message after the decrypt. Capturing a real feed, two ways (see the cr
      tshark -r feed.pcap -o tls.keylog_file:keys.log -Y websocket -T fields -e frame.time_epoch \\
             -e websocket.payload > feed.txt      (field names vary by version: tshark -G fields | grep websocket)
      replay --import-hex feed.txt --out feed.rec
-The replay leaves out the decrypt: charge each TLS record 100-300 ns fixed plus 0.5-1 ns a byte, checked
+The replay leaves out the decrypt: charge each TLS record 100-300 ns fixed plus 0.15-0.35 ns a byte, checked
 on this core with openssl speed -evp aes-128-gcm -decrypt -bytes <median record size>.";
 
 #[derive(Clone, Copy, PartialEq)]
@@ -216,7 +216,7 @@ fn main() {
     let ws = if s50 < 126 { 2 } else { 4 };
     let sealed = s50 + ws + 1;
     println!("  not replayed: the decrypt. One update a record is a {}-byte record, {sealed} bytes sealed: 100-300 ns fixed \
-              + 0.5-1 ns a byte = {}-{} ns a record (the chapter: 300-500 ns for about 200 bytes); \
+              + 0.15-0.35 ns a byte = {}-{} ns a record (the chapter: 150-350 ns for about 200 bytes); \
               check: openssl speed -evp aes-128-gcm -decrypt -bytes {sealed}",
-             sealed + 21, 100 + sealed / 2, 300 + sealed);
+             sealed + 21, 100 + sealed * 15 / 100, 300 + sealed * 35 / 100);
 }

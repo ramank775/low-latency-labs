@@ -66,9 +66,10 @@ fn main() {
     lab::predict(&[
         "after the drop the copy keeps a best bid the venue removed: wrong from the next update on,",
         "silently, until an ask at or below it crosses the copy. With the check, the gap is seen on the",
-        "next update, about 50 µs later at 20,000 a second; a 200 ms resync at 20,000 a second buffers",
-        "4,000 updates, so a 70 ms one about 1,400; the replay of them is the small part, the round trip",
-        "the large one; and the tops agree again once the state is Live.",
+        "next update, about 50 µs later at 20,000 a second; a 70 ms resync on the open connection buffers",
+        "about 1,400 updates, one on a new connection, up to 350 ms, 7,000, more than the 4,096 reserved,",
+        "so it starts again; the replay of them is the small part, the round trip the large one; and the",
+        "tops agree again once the state is Live.",
     ]);
     let clock = Clock::new();
     let (updates, made) = gen::generate(&gen::Params { records, seed, ..Default::default() });

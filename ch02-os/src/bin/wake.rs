@@ -77,7 +77,7 @@ fn main() {
     println!("Predict first (the chapter's prediction, before you measure): spin moves one cache line each way, \
               50-100 ns a hop, a round trip of 100-200 ns. Park pays a futex, the reschedule interrupt, the far core's \
               C-state exit and a scheduler pass: 3-10 µs a hop with C-states capped, 6-20 µs a round trip; without --c0 \
-              the p99 shows 100-200 µs hops out of C6. Sleep is bounded below by timer slack, 50-60 µs a hop, so a round \
+              the p99 shows 50-150 µs hops out of C6. Sleep is bounded below by timer slack, 50-60 µs a hop, so a round \
               trip above 100 µs whatever --c0 does; with --timerslack 1 the hop drops to a few microseconds and stops there.");
     print_platform();
 

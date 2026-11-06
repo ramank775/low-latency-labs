@@ -123,12 +123,12 @@ fn prediction(a: &Args) -> Vec<String> {
         (Mode::BusyPoll, _) => p.push("--busy-poll: about 3 us at p50 and 5-6 us at p99, round trips of 8-15 us; --c0 changes nothing.".into()),
         (Mode::Spin, true) => p.push("--spin --c0: 1-2 us more than --busy-poll, for the interrupt and the cross-core transfer.".into()),
         (Mode::Spin, false) => p.push("--spin without --c0: not immune; its softirq runs on a housekeeping core that now sleeps between packets, \
-                                       and many round trips pay that core's C6 exit, 100-200 us.".into()),
+                                       and many round trips pay that core's C6 exit, 50-150 us.".into()),
         (Mode::Epoll, true) => p.push("--epoll --c0: the card and the kernel's receive path, 8-10 us at p50 and 20-40 us at p99: round trips \
                                        of 13-22 us at p50 and 25-50 us at p99.".into()),
         (Mode::Blocking, true) => p.push("--blocking --c0: --epoll's numbers less the epoll_wait, about 0.5 us: p50 13-22 us, p99 25-50 us.".into()),
-        (Mode::Epoll | Mode::Blocking, false) if quiet => p.push("a sleeping mode without --c0 at a 2 ms gap: the governor picks its deepest state, +100-200 us: \
-                                                                  p50 105-210 us, p99 several hundred, max in ms.".into()),
+        (Mode::Epoll | Mode::Blocking, false) if quiet => p.push("a sleeping mode without --c0 at a 2 ms gap: the governor picks its deepest state, +50-150 us: \
+                                                                  p50 55-160 us, p99 100-300 us, max in ms.".into()),
         (Mode::Epoll | Mode::Blocking, false) => p.push("a sleeping mode at --gap 0: near the --c0 numbers (p50 13-22 us), since a core idle for 15-30 us \
                                                          is never sent deep: quiet sets a sleeping reader's tail.".into()),
     }
