@@ -55,8 +55,9 @@ fn main() {
     lab::predict(&[
         "the ranking ArrayBook, VecBook, TreeBook. ArrayBook at 2-5 ns, its p99 where the 1% that move",
         "the cursor land, 5-20 ns; VecBook 20-60 ns to find a level, 120-360 ns to add or remove one;",
-        "TreeBook, its two best-price walks included, 160-500 ns on an existing level and 210-700 ns on",
-        "a new or emptied one. An ArrayBook max far above its p99 is the machine, not the structure.",
+        "TreeBook, its two best-price walks included, 60-90 ns on an existing level and 75-130 ns on",
+        "a new or emptied one, its nodes warm in L1 and L2. An ArrayBook max far above its p99 is the",
+        "machine, not the structure.",
     ]);
 
     let clock = Clock::new();

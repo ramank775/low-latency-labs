@@ -76,8 +76,9 @@ fn prediction(v: Variant) -> Vec<&'static str> {
         p.push("second send, a microsecond or two a request: two setsockopt, two sendto and one recvfrom.");
     } else if v.nodelay {
         p.push("--nodelay: two segments about a microsecond apart (a few more if autocorking holds the body for the");
-        p.push("header's transmit completion); a server that wakes on the header reads 4 bytes and sleeps again, so a");
-        p.push("p50 a microsecond or two above --one-write's and a p99 up to a wake-up above it. Two sendto, one recvfrom.");
+        p.push("header's transmit completion); a server that wakes on the header reads 4 bytes and sleeps again, and");
+        p.push("the body must wake it a second time: a p50 about one wake-up above --one-write's, about 5 us on loopback,");
+        p.push("and a p99 up to two above it. Two sendto, one recvfrom.");
     }
     p
 }

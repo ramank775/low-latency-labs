@@ -108,7 +108,7 @@ The replay half is `replay`; the capture half needs a venue. A record is an 8-by
 
 Then `replay --file feed.rec --full-speed` and `--paced`. If the venue offers a binary encoding of the same stream,
 capture both at once on two connections and replay each. The replay leaves out the decrypt: charge each record
-100–300 ns fixed plus 0.5–1 ns a byte, checked with `openssl speed -evp aes-128-gcm -decrypt -bytes <median record
+300–450 ns fixed plus 0.15–0.35 ns a byte, checked with `openssl speed -evp aes-128-gcm -decrypt -bytes <median record
 size>` (the binary prints the arithmetic for the file's median).
 
 ## What needs root, perf, tcpdump or a second machine

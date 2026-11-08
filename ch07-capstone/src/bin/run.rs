@@ -104,7 +104,7 @@ fn main() {
     // before anything else is mapped: every later mapping is filled in and stays in RAM
     let locked = lock_memory();
     if !locked {
-        eprintln!("warning: mlockall refused (needs CAP_IPC_LOCK or `ulimit -l unlimited`): pages may fault during the run");
+        eprintln!("warning: memory not locked (mlockall needs root or `ulimit -l unlimited`): pages may fault during the run");
     }
     let tpn = calibrate();
     a.cfg.tpn = tpn;

@@ -313,11 +313,19 @@ impl Replay {
 }
 
 /// `mlockall(MCL_CURRENT | MCL_FUTURE)`: every page the process has or will
-/// have stays in RAM and is filled in when mapped. Needs CAP_IPC_LOCK or a
-/// raised `ulimit -l`; false when refused.
+/// have stays in RAM and is filled in when mapped. Tried only as root or with
+/// `ulimit -l unlimited`: under a finite limit the call itself succeeds, and
+/// MCL_FUTURE then refuses the first mapping past the limit with EAGAIN, the
+/// replay file's or a thread's stack. False when not tried or refused.
 pub fn lock_memory() -> bool {
-    // SAFETY: mlockall takes two flags and touches no memory of ours.
-    unsafe { libc::mlockall(libc::MCL_CURRENT | libc::MCL_FUTURE) == 0 }
+    let mut lim = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+    // SAFETY: getrlimit writes only lim, a live local; geteuid and mlockall take no pointers.
+    unsafe {
+        // ponytail: root stands in for CAP_IPC_LOCK; a capability given by setcap, or a
+        // finite limit large enough for the run, is not detected and runs unlocked
+        let unlimited = libc::getrlimit(libc::RLIMIT_MEMLOCK, &mut lim) == 0 && lim.rlim_cur == libc::RLIM_INFINITY;
+        (unlimited || libc::geteuid() == 0) && libc::mlockall(libc::MCL_CURRENT | libc::MCL_FUTURE) == 0
+    }
 }
 
 /// The cores this process may run on: the ones its affinity mask allows.
