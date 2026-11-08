@@ -17,7 +17,6 @@
 use hdrhistogram::Histogram;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, Ordering::{Acquire, Relaxed}};
-use std::time::{Duration, Instant};
 
 pub mod atomics;
 pub mod freelist;
@@ -59,16 +58,23 @@ pub fn now() -> u64 {
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 #[inline(always)]
 pub fn now() -> u64 {
-    static T0: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
-    T0.get_or_init(Instant::now).elapsed().as_nanos() as u64
+    static T0: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    T0.get_or_init(std::time::Instant::now).elapsed().as_nanos() as u64
 }
 
-/// Clock ticks per nanosecond, measured once at startup against CLOCK_MONOTONIC.
+/// Clock ticks per nanosecond, measured once at startup against
+/// CLOCK_MONOTONIC_RAW, the kernel clock the time daemon never slews.
 pub fn calibrate() -> f64 {
-    let (i0, t0) = (Instant::now(), now());
-    while i0.elapsed() < Duration::from_millis(200) {} // spin for 200 ms
-    let (i1, t1) = (Instant::now(), now());
-    (t1 - t0) as f64 / (i1 - i0).as_nanos() as f64
+    let raw = || { // CLOCK_MONOTONIC_RAW, in ns
+        let mut ts = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+        // SAFETY: clock_gettime only writes ts, a live local.
+        unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC_RAW, &mut ts) };
+        ts.tv_sec as u64 * 1_000_000_000 + ts.tv_nsec as u64
+    };
+    let (n0, t0) = (raw(), now());
+    while raw() - n0 < 200_000_000 {} // spin for 200 ms
+    let (n1, t1) = (raw(), now());
+    (t1 - t0) as f64 / (n1 - n0) as f64
 }
 
 /// Ticks to nanoseconds.
