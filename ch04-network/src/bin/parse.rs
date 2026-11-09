@@ -130,7 +130,8 @@ fn main() {
     if !ch04_network::counting::installed() { usage("the counting allocator is not installed"); }
 
     timing::predict(prediction(mode));
-    println!("  Every JSON mode a hundred times --binary or more; (--json - --json-borrowed) / 6 is one allocation");
+    println!("  Every JSON mode tens of times --binary or more: --json-borrowed at the low end, --json-value well over");
+    println!("  a hundred. (--json - --json-borrowed) / 6 is one allocation");
     println!("  and its free, 40-100 ns, or somewhat less in a loop this warm.");
     let tpn = calibrate();
     let m = Messages::new(SET, seed);

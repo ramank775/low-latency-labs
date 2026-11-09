@@ -116,9 +116,10 @@ size>` (the binary prints the arithmetic for the file's median).
 - **Two machines**: the `--tcp <host>`/`--host <host>` rungs; every two-machine number in the chapter. Over loopback
   there is no card, no interrupt and no switch, so the ladder's two-machine rows and pollwait's mode differences cannot
   be reproduced on one box.
-- **SO_BUSY_POLL** (`--busy-poll`, `open_hot`): the chapter says raising it above `net.core.busy_read` needs
-  CAP_NET_ADMIN, and kernels that check return EPERM; the binaries then print why, how to fix it (root, or `sysctl -w
-  net.core.busy_read=50`) and that the run measures `--spin`. The reference VM's kernel, 6.18, grants it unprivileged.
+- **SO_BUSY_POLL** (`--busy-poll`, `open_hot`): before kernel 6.4, raising it above `net.core.busy_read` needs
+  CAP_NET_ADMIN, and those kernels return EPERM; the binaries then print why, how to fix it (root, or `sysctl -w
+  net.core.busy_read=50`) and that the run measures `--spin`. Since 6.4 anyone may set it. `open_hot` also sets
+  `SO_PREFER_BUSY_POLL`, which needs CAP_NET_ADMIN on every kernel, and returns EPERM without it.
   On loopback it changes nothing: there is no card's ring to poll, and `TcpExtBusyPollRxPackets` stays at zero.
 - **`--c0`** (pollwait): writes 0 to `/dev/cpu_dma_latency`, root on a stock box; refused, the run says so and goes on
   without it.
@@ -197,7 +198,7 @@ What the numbers say about this box rather than the network:
   it. With other jobs on both cores, a sleeper pinned to its own core waits for whatever runs there to give the core
   up; unpinned, the scheduler wakes it beside its partner. Pinning without isolation is the stock box's worst case.
 - `--busy-poll` on loopback is `--spin` (`TcpExtBusyPollRxPackets` +0): loopback has no card's ring to poll. The
-  setsockopt itself succeeded, even as an unprivileged user: this kernel does not ask for CAP_NET_ADMIN.
+  setsockopt itself succeeded, even as an unprivileged user: kernels since 6.4 do not ask for CAP_NET_ADMIN.
 - The spinning pollwait modes at `--gap 2000` show the chapter's second caveat, not its numbers: client and server
   each spin on one of two cores that other jobs also want, get a third of a core each, and every reply waits out a
   time slice. `--c0` did not help (80 µs against 114 µs for `--blocking`, noise on this box): a guest's C-states

@@ -47,7 +47,8 @@ fn main() {
 
     lab::predict(&[
         "the ring at 5-20 ns an item; mpsc at 100-300 ns with the consumer spinning on try_recv;",
-        "the mutex at 150-400 ns: each 15-25 times the ring, and within a factor of two of the other.",
+        "the mutex at 150-400 ns: each roughly 5-80 times the ring, 15-25 at the middles of the ranges,",
+        "and within a factor of two of the other.",
         "Paced at one item a microsecond, latency is the hand-off itself; flat out against a full",
         "ring it is only queueing: about 4,096 items' worth of the consumer's time.",
     ]);

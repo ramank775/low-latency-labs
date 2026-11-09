@@ -127,13 +127,13 @@ fn main() {
     let path = file.unwrap_or_else(|| usage("give --file <path>, --write-synthetic <path> or --import-hex <txt>"));
     if full == paced { usage("give one of --full-speed or --paced"); }
     if full {
-        timing::predict(&["JSON: 1-3 us for 194 bytes in a running handler is 5-15 ns a byte; this loop is as warm as Lab 4.4's,",
-                          "so expect that lab's rate per byte. The binary stream: a hundred times faster, 10-20 ns a message.",
+        timing::predict(&["JSON: 1-3 us for 194 bytes in a running handler is 5-15 ns a byte, but this loop is as warm as Lab 4.4's,",
+                          "so expect that lab's measured rate: under 5 ns a byte borrowed, under 1 us for 194 bytes. The binary stream: a hundred times faster, 10-20 ns a message.",
                           "A minute of an ordinary day, about 120,000 messages at 2,000 a second, should replay in well under a second."]);
     } else {
         timing::predict(&["At the recorded pace most frames arrive alone and the p50 is one parse. The tail comes from clumps:",
-                          "the k-th of a clump waits behind k - 1 parses, so the last of a clump of ten finishes 10-30 us after",
-                          "its release (JSON). Predict the p99 as the 99th percentile of the places times the full-speed time",
+                          "the k-th of a clump waits behind k - 1 parses, so the last of a clump of ten finishes under 10 us after",
+                          "its release here (JSON), 10-30 us in a running handler. Predict the p99 as the 99th percentile of the places times the full-speed time",
                           "(worked out for this file below, before the paced run)."]);
     }
     let cap = Capture::load(&path).unwrap_or_else(|e| usage(&format!("{}: {e}", path.display())));

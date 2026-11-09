@@ -8,7 +8,8 @@ license.workspace = true
 
 [features]
 # Per-message stage stamps t1 and t2 and the decode/hop/think histograms.
-# Off by default: they cost 40-60 ns inside the number they report.
+# Off by default: they cost 40-55 ns a message, 16-20 ns of it (the t1 and t2
+# reads) inside the total they report.
 stages = []
 
 [dependencies]

@@ -4,11 +4,11 @@
 
 use std::net::{Ipv4Addr, UdpSocket};
 
-/// Bind the feed's port and join group A, 239.1.1.1, on the interface whose
-/// address is `ours` (the chapter's 10.1.0.5; 127.0.0.1 on loopback).
+/// Bind group A, 239.1.1.1, and the feed's port, and join the group on the
+/// interface whose address is `ours` (the chapter's 10.1.0.5; 127.0.0.1 on loopback).
 pub fn join_feed_a(port: u16, ours: Ipv4Addr) -> std::io::Result<UdpSocket> {
-    // bind the feed's port, then join its group on the feed-facing card
-    let feed_a = UdpSocket::bind(("0.0.0.0", port))?;
+    // bind the group and the feed's port, then join it on the feed-facing card
+    let feed_a = UdpSocket::bind((Ipv4Addr::new(239, 1, 1, 1), port))?; // only group A's datagrams
     feed_a.join_multicast_v4(&Ipv4Addr::new(239, 1, 1, 1),  // group A
                              &ours)?;                       // our address there
     Ok(feed_a)
@@ -39,7 +39,10 @@ impl<F: FnMut(&[u8])> Arbiter<F> {
     // arbitration: one expected sequence number shared by both feeds
     pub fn on_packet(&mut self, seq: u64, msgs: &[u8]) {
         if seq < self.next {
-            return; // the other feed's copy came first: drop this one
+            if self.fill(seq) {
+                self.apply(msgs); // the other feed's late copy fills a marked gap
+            }
+            return; // otherwise the other feed's copy came first: drop this one
         }
         if seq > self.next {
             self.gap(self.next, seq); // missing on both so far: mark, ask gap-fill
@@ -50,6 +53,17 @@ impl<F: FnMut(&[u8])> Arbiter<F> {
 
     fn gap(&mut self, from: u64, to: u64) {
         self.gaps.push((from, to));
+    }
+
+    /// Strikes `seq` from the marked gaps; false if it was in none.
+    fn fill(&mut self, seq: u64) -> bool {
+        let Some(i) = self.gaps.iter().position(|&(from, to)| from <= seq && seq < to) else {
+            return false;
+        };
+        let (from, to) = self.gaps.swap_remove(i);
+        if from < seq { self.gaps.push((from, seq)); }
+        if seq + 1 < to { self.gaps.push((seq + 1, to)); }
+        true
     }
 
     fn apply(&mut self, msgs: &[u8]) {
@@ -70,14 +84,27 @@ mod tests {
         // and B's 102 comes after A's
         let arrivals = [100u64, 100, 101, 102, 102, 103, 105, 105];
         for s in arrivals { arb.on_packet(s, &[s as u8]); }
-        // B's 101 arrived only after A's 102 had been applied: too late, dropped
         arb.on_packet(106, &[106]);
-        arb.on_packet(101, &[101]);
+        arb.on_packet(101, &[101]); // a third copy of 101, already applied: dropped
         let (next, gaps) = (arb.next, arb.gaps.clone());
         drop(arb);
         assert_eq!(applied, vec![100, 101, 102, 103, 105, 106]);
         assert_eq!(gaps, vec![(104, 105)]);
         assert_eq!(next, 107);
+    }
+
+    #[test]
+    fn a_late_copy_fills_its_gap_and_only_once() {
+        let mut applied = Vec::new();
+        let mut arb = Arbiter::new(100, |m: &[u8]| applied.push(m[0]));
+        // A loses 101 to 103; B's copies arrive after A's 104
+        for s in [100u64, 104, 102, 102, 105] { arb.on_packet(s, &[s as u8]); }
+        let (next, mut gaps) = (arb.next, arb.gaps.clone());
+        drop(arb);
+        gaps.sort();
+        assert_eq!(applied, vec![100, 104, 102, 105]); // the second 102 dropped
+        assert_eq!(gaps, vec![(101, 102), (103, 104)]); // still missing on both
+        assert_eq!(next, 106);
     }
 
     #[test]

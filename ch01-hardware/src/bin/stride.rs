@@ -53,8 +53,9 @@ fn main() {
     };
     predict(&format!(
         "strides of 1 to 8 elements fetch every line once, in order: time per pass flat at about \
-         13-17 ms for 256 MB (256 MB / 15-20 GB/s){scale}, time per access rising from about 0.4 ns \
-         to 3 ns. On Intel, stride 16 may stay flat too. From 128 B to 2 KB, 5-10 ns per access. \
+         13-17 ms for 256 MB (256 MB / 15-20 GB/s){scale}, time per access rising from about 0.4-0.5 ns \
+         to 3-4 ns. On Intel, stride 16 may stay flat too. From 256 B to 2 KB (128 B where stride 16 is not \
+         flat), 5-10 ns per access. \
          From 4 KB on, a new page every access: a knee, then a plateau around 10-30 ns, well below \
          the 90 ns DRAM latency, because the addresses are computed and ten or more misses are in flight."));
 

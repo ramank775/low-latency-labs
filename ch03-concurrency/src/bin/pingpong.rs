@@ -29,8 +29,9 @@ interval come from one core's counter.
   --cores A,B     the two cores; default 2,3
   --iters N       round trips timed, default 1_000_000 (100_000 per pair with --matrix)
   --warmup N      round trips first, not timed, default 100_000 (10_000 with --matrix)
-  --no-pause      spin without spin_loop(): pause takes about 140 cycles on Intel parts
-                  since Skylake-SP and can add up to 35 ns a hop. Run with and without.
+  --no-pause      spin without spin_loop(): pause takes 140-150 cycles on most Intel cores
+                  since Skylake (about 40 on Cascade Lake Xeons) and can add about 35 ns a
+                  hop at 4 GHz. Run with and without.
   --placements    one run for each placement this machine has: hyperthread siblings, two
                   cores sharing an L3, two L3s on one socket, two sockets; then the ratio of
                   the two-socket p50 to the one-L3 p50
@@ -143,7 +144,7 @@ fn main() {
         "Two L3s on one socket: 80-120 ns a hop, 160-240 ns a round trip.",
         "Two sockets: 120-250 ns a hop, 250-500 ns a round trip.",
         "On a quiet pinned box the p99 within 10-20% of the p50, and a max showing the 1-5 us",
-        "of a timer tick unless the cores are isolated. The matrix comes out in blocks.",
+        "of a timer tick unless the cores run tickless (nohz_full). The matrix comes out in blocks.",
     ]);
     println!("{}", machine());
     let tpn = calibrate();

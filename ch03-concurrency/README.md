@@ -115,8 +115,7 @@ number, so pass cores from the list printed on the `machine:` line.
 | 3.1 store buffering | `./target/release/message_passing --sb` (Release/Acquire, then SeqCst; `--sb --seqcst` for one) |
 | 3.1 under loom | `RUSTFLAGS="--cfg loom" cargo test --release -p ch03-concurrency --test mp_loom -- --nocapture` |
 | 3.2 contended counter | `./target/release/counter --mutex`, `--atomic`, `--per-thread`, `--per-thread-rmw`, `--unpadded` (none: all five and a table) |
-| 3.2 futex calls | `strace -f -c -e trace=futex ./target/release/counter --mutex` |
-| 3.2 context switches | `perf stat -e context-switches ./target/release/counter --mutex` (the binary prints getrusage's count without perf) |
+| 3.2 futex calls and context switches | `perf stat -e context-switches,syscalls:sys_enter_futex ./target/release/counter --mutex` (the binary prints getrusage's context switches without perf; `strace -f -c -e trace=futex` also counts, but slows the threads it stops) |
 | 3.3 ping-pong | `./target/release/pingpong --cores A,B`, with and without `--no-pause` |
 | 3.3 every placement | `./target/release/pingpong --placements` (siblings, one L3, two L3s, two sockets, whichever exist) |
 | 3.3 matrix | `./target/release/pingpong --matrix` |

@@ -78,7 +78,7 @@ fn main() {
         "on random bytes the condition is true for 127 of 256 values, close to a coin flip: about 50 \
          million mispredicts per 100 MB pass at roughly 17 cycles, about 0.2 s at 4 GHz, plus about \
          25 ms of basic work. Sorted: the predictor fails only at the boundary, 25-50 ms. Branchless \
-         never mispredicts: 25-50 ms, or less if vectorised. So unsorted-branchy 4-8x slower than either, \
+         never mispredicts: 25-50 ms, or less if vectorised. So unsorted-branchy 4.5-9x slower than either, \
          about 50 million branch misses against near zero, IPC 0.5-1 against 2 or more.{}",
         if size_mb == 100 { String::new() } else { format!(" (at --size {size_mb}: {size_mb}/100 of those times and misses)") }));
 
@@ -130,7 +130,7 @@ fn main() {
     }
     if let Some(&(_, slow)) = p50.iter().find(|x| x.0 == "unsorted") {
         for &(name, t) in p50.iter().filter(|x| x.0 != "unsorted") {
-            println!("unsorted / {name}: {:.1}x at the p50 (the chapter: 4-8x against sorted and branchless)", slow / t);
+            println!("unsorted / {name}: {:.1}x at the p50 (the chapter: 4.5-9x against sorted and branchless)", slow / t);
         }
     }
     println!("Under perf stat, one variant per run: expect about {} branch-misses per pass for unsorted, \

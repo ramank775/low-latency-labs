@@ -36,9 +36,9 @@ usage: counter [--mutex] [--atomic] [--per-thread] [--per-thread-rmw] [--unpadde
 Prints the wall time, ns per increment (wall time divided by threads x iters), each
 thread's finish time, ns per increment batch by batch (p50, p99, p99.9, max), and each
 thread's context switches from getrusage, the count perf stat -e context-switches gives.
-The chapter also asks for the futex calls, which need strace (or perf trace):
-  strace -f -c -e trace=futex ./target/release/counter --mutex
-  perf stat -e context-switches ./target/release/counter --mutex";
+The chapter also asks for the futex calls; perf counts them without slowing the threads:
+  perf stat -e context-switches,syscalls:sys_enter_futex ./target/release/counter --mutex
+(strace -f -c -e trace=futex counts too, but stops each thread at every call, so locks are held longer.)";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Kind {
@@ -236,7 +236,7 @@ fn main() {
         "--atomic: 40 million increments on one line: 15-50 ns an increment overall (throughput,",
         "  wall / 40 million; one increment's latency is 50-300 ns), 0.6-2 s, 30-100x --per-thread.",
         "--unpadded: the same range as --atomic: the counters are separate, the line is not.",
-        "--mutex: 2-10x --atomic, 2-10 s, hundreds of thousands to millions of futex calls and",
+        "--mutex: 2-10x --atomic, roughly 1-20 s, hundreds of thousands to millions of futex calls and",
         "  context switches to match; uneven finish times, the first can finish in half the last's time.",
     ]);
     println!("{}", machine());

@@ -44,7 +44,7 @@ and `steal`. Percentiles are p50, p99, p99.9, p99.99 and max with the sample cou
 
 | Bin | The chapter's run |
 |---|---|
-| `jitter` | `./target/release/jitter`, then `taskset -c 3 ./target/release/jitter`, then `taskset -c <isolated core> ./target/release/jitter` |
+| `jitter` | `./target/release/jitter`, then `taskset -c 2 ./target/release/jitter`, then `taskset -c <isolated core> ./target/release/jitter` |
 | `syscalls` | `strace -c -f ./target/release/syscalls`, `perf trace -s ./target/release/syscalls`, `perf stat -e raw_syscalls:sys_enter,page-faults,context-switches,cpu-migrations ./target/release/syscalls`; then each with `--log-pass` and with `--log-access` |
 | `first_touch` | `perf stat -e page-faults,dTLB-store-misses ./target/release/first_touch [--populate \| --thp \| --hugetlb \| --mlockall]` |
 | `wake` | `./target/release/wake --cores 3,4`, then the same with `--c0`; then `./target/release/wake --sleep --timerslack 1 --cores 3,4` |

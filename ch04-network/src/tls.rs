@@ -17,8 +17,9 @@ pub fn tls_feed(addr: &str, server: &str, key_log: bool, mut on_bytes: impl FnMu
         .with_root_certificates(roots)
         .with_no_client_auth();
     if key_log { config.key_log = Arc::new(rustls::KeyLogFile::new()); } // Lab 4.5: SSLKEYLOGFILE
+    let config = Arc::new(config); // kept: every reconnect reuses its session cache
     let name = server.to_owned().try_into()?;
-    let mut tls = ClientConnection::new(Arc::new(config), name)?;
+    let mut tls = ClientConnection::new(config.clone(), name)?;
     let mut sock = TcpStream::connect(addr)?; // TCP: 1 round trip
     sock.set_nodelay(true)?;
     while tls.is_handshaking() {
@@ -29,6 +30,13 @@ pub fn tls_feed(addr: &str, server: &str, key_log: bool, mut on_bytes: impl FnMu
 
     let mut plain = [0u8; 16384];
     loop {
+        if tls.wants_write() { // pongs written into tls.writer(), and rustls's own records
+            match tls.write_tls(&mut sock) {
+                Ok(_) => {}
+                Err(e) if e.kind() == ErrorKind::WouldBlock => {} // send buffer full: next pass
+                Err(e) => return Err(e.into()),
+            }
+        }
         match tls.read_tls(&mut sock) { // one recv: ciphertext into rustls
             Ok(0) => return Ok(()),     // the venue closed the connection
             Ok(_) => {}

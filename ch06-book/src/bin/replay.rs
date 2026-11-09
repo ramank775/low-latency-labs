@@ -32,6 +32,8 @@ The chapter counts the same replay under perf (needs perf):
   perf stat -e cycles,instructions,branch-misses,cache-misses,L1-dcache-load-misses \\
       -- taskset -c 3 ./book-replay array updates-10m.bin
   perf record -g -- taskset -c 3 ./book-replay tree updates-10m.bin; perf report
+(-g needs frame pointers: build with RUSTFLAGS=\"-C force-frame-pointers=yes\", or record
+with --call-graph dwarf instead)
 and divides by 10,000,000. cargo asm --lib \"<ch06_book::ArrayBook as ch06_book::Book>::apply\"";
 
 fn main() {
@@ -53,8 +55,8 @@ fn main() {
     }
 
     lab::predict(&[
-        "the ranking ArrayBook, VecBook, TreeBook. ArrayBook at 2-5 ns, its p99 where the 1% that move",
-        "the cursor land, 5-20 ns; VecBook 20-60 ns to find a level, 120-360 ns to add or remove one;",
+        "the ranking ArrayBook, VecBook, TreeBook. ArrayBook at 2-5 ns, its p99.9 where the 1% that move",
+        "the cursor land, 5-20 ns (the p99 sits on the edge of that 1% and may show either); VecBook 20-60 ns to find a level, 120-360 ns to add or remove one;",
         "TreeBook, its two best-price walks included, 60-90 ns on an existing level and 75-130 ns on",
         "a new or emptied one, its nodes warm in L1 and L2. An ArrayBook max far above its p99 is the",
         "machine, not the structure.",

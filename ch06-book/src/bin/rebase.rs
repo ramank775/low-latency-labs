@@ -59,7 +59,7 @@ fn main() {
     lab::predict(&[
         "the copy re-base is a 1 MB memmove, 50-150 µs (50-150 budgets) whatever the step; the ring's is",
         "a new origin and the cleared slots, near zero for a step of a few levels; a rebuild clears the",
-        "whole window and applies every level, and in production waits 70-200 ms for the snapshot. Write",
+        "whole window and applies every level, and in production waits 70-350 ms for the snapshot. Write",
         "down which of the three wins for a step and which for a jump of the whole window.",
     ]);
     let clock = Clock::new();
