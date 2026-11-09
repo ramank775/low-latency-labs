@@ -76,10 +76,12 @@ fn main() {
 
     predict(&format!(
         "on random bytes the condition is true for 127 of 256 values, close to a coin flip: about 50 \
-         million mispredicts per 100 MB pass at roughly 17 cycles, about 0.2 s at 4 GHz, plus about \
-         25 ms of basic work. Sorted: the predictor fails only at the boundary, 25-50 ms. Branchless \
-         never mispredicts: 25-50 ms, or less if vectorised. So unsorted-branchy 4.5-9x slower than either, \
-         about 50 million branch misses against near zero, IPC 0.5-1 against 2 or more.{}",
+         million mispredicts per 100 MB pass at an effective 27 cycles (the 15-20-cycle refill and the \
+         work lost around it), about 0.35 s at 4 GHz, plus about 70 ms of basic work, three cycles a \
+         byte. Sorted: the predictor fails only at the boundary, about 70 ms. Branchless never \
+         mispredicts: about the same or a little less, and less again if vectorised. So unsorted-branchy \
+         4.5-9x slower than either, about 50 million branch misses against near zero, IPC about 0.5 \
+         against 2.5-3.{}",
         if size_mb == 100 { String::new() } else { format!(" (at --size {size_mb}: {size_mb}/100 of those times and misses)") }));
 
     let pinned = pin_line(core);

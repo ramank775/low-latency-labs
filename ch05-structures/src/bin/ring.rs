@@ -92,7 +92,7 @@ fn main() {
     }
 
     if let Some(&(_, ring_t, ring_l)) = rows.iter().find(|r| r.0 == Queue::Spsc) {
-        println!("against the ring (p50 to p50; the chapter predicts 15-25x):");
+        println!("against the ring (p50 to p50; the chapter predicts roughly 5-80x flat out, 1.5-3x paced):");
         for (q, t, l) in rows.iter().filter(|r| r.0 != Queue::Spsc) {
             println!("  {:<24} throughput per item {:>6}x   paced latency {:>6}x", q.name(),
                      fmt_ns(t.p50 / ring_t.p50.max(1e-9)), fmt_ns(l.p50 / ring_l.p50.max(1e-9)));

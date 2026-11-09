@@ -9,8 +9,8 @@
 //! The chapter's three runs:
 //!
 //!     ./target/release/jitter                    # unpinned
-//!     taskset -c 3 ./target/release/jitter       # pinned to an ordinary core
-//!     taskset -c 5 ./target/release/jitter       # pinned to an isolated nohz_full core, if the box has one
+//!     taskset -c 2 ./target/release/jitter       # pinned to an ordinary housekeeping core
+//!     taskset -c 3 ./target/release/jitter       # pinned to an isolated nohz_full core, if the box has one
 
 use ch02_os::counting::allocs;
 use ch02_os::procfs::{sep, Snapshot};
@@ -29,8 +29,8 @@ Reads rdtsc back to back for S seconds (default 10) and records every gap.
 
 The chapter's three runs:
   ./target/release/jitter                     unpinned
-  taskset -c 3 ./target/release/jitter        pinned to an ordinary core
-  taskset -c 5 ./target/release/jitter        pinned to an isolated nohz_full core
+  taskset -c 2 ./target/release/jitter        pinned to an ordinary housekeeping core
+  taskset -c 3 ./target/release/jitter        pinned to an isolated nohz_full core
 
 Prints the /proc/interrupts and /proc/softirqs deltas for the core itself, so
 no snapshot by hand is needed. An isolated core needs boot parameters (root,
