@@ -1,5 +1,6 @@
 //! pollwait: Lab 4.3, poll vs wait. An echo client and server for 100-byte
-//! messages, the size of the chapter's depth update, over UDP, or over TCP with
+//! messages, the size of the depth update in the chapter's receive and waiting
+//! worked examples, over UDP, or over TCP with
 //! --tcp. The server never changes: a non-blocking recv loop with SO_BUSY_POLL
 //! on its own core. Only the client's way of waiting differs between runs.
 //!
@@ -35,7 +36,7 @@ modes:
   --blocking     a blocking recv
   --epoll        the socket registered with mio, Poll::poll, then drained to WouldBlock
   --spin         a non-blocking recv in a loop
-  --busy-poll    the same with SO_BUSY_POLL at 50 us (a kernel that refuses it without CAP_NET_ADMIN
+  --busy-poll    the same with SO_BUSY_POLL at 50 us (a kernel before 6.4 that refuses it without CAP_NET_ADMIN
                  gets a message, and the run measures --spin)
 
 options:

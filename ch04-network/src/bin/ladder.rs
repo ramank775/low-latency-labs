@@ -36,7 +36,7 @@ usage:
      --connect host:port is --tcp host:port; --listen [addr:]port is --echo on that address
 
   --spin         sockets non-blocking, each side loops on recv on its pinned core (give it at both ends)
-  --busy-poll    the same with SO_BUSY_POLL at 50 us on both sockets; a kernel that refuses it above
+  --busy-poll    the same with SO_BUSY_POLL at 50 us on both sockets; a kernel before 6.4 that refuses it above
                  net.core.busy_read without CAP_NET_ADMIN gets a message, and the run measures --spin
 
 options:

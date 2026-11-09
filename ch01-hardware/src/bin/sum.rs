@@ -46,7 +46,8 @@ fn main() {
         format!(" (at --len {len}: sum1 about {:.2} us, sum4 about {:.2} us)", len as f64 * 4.0 / 4e3, len as f64 / 4e3)
     };
     predict(&format!(
-        "a floating-point add takes 3-4 cycles and the core can start two per cycle. sum1 is one \
+        "a floating-point add takes 2-4 cycles (4 on Skylake and Ice Lake, 3 on Zen 3 and 4, 2 on Golden Cove) \
+         and the core can start two per cycle; the figures are for a 4-cycle core. sum1 is one \
          chain: for 4,096 values about 16,000 cycles, roughly 4 us at 4 GHz. sum4 is four chains \
          that interleave, about one add per cycle: roughly 1 us, four times faster{scale}."));
 

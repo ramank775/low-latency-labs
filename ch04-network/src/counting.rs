@@ -33,7 +33,19 @@ unsafe impl GlobalAlloc for Counting {
         // SAFETY: ptr came from System.alloc with this layout.
         unsafe { System.dealloc(ptr, layout) }
     }
-    // realloc is the trait's default: alloc, copy, dealloc, so growth is counted too
+    // Forwarded, so calloc's zeroed pages and realloc's in-place growth stay as they
+    // were; a realloc counts as one alloc and one free, as the default's would.
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        ALLOCS.fetch_add(1, Ordering::Relaxed);
+        // SAFETY: the caller's layout is passed on unchanged.
+        unsafe { System.alloc_zeroed(layout) }
+    }
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        ALLOCS.fetch_add(1, Ordering::Relaxed);
+        FREES.fetch_add(1, Ordering::Relaxed);
+        // SAFETY: ptr came from System with this layout; new_size is the caller's.
+        unsafe { System.realloc(ptr, layout, new_size) }
+    }
 }
 
 /// Whether this process counts: true only when a binary installed `Counting`.

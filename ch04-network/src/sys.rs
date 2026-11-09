@@ -94,8 +94,8 @@ pub fn busy_poll_or_say(sock: &impl AsRawFd, who: &str) -> bool {
         Ok(()) => true,
         Err(e) => {
             let floor = sysctl("net.core.busy_read").unwrap_or_else(|| "?".into());
-            eprintln!("note: {who}: SO_BUSY_POLL at 50 µs refused ({e}). Above net.core.busy_read \
-                       (here {floor}) it needs CAP_NET_ADMIN: run as root, or have root set \
+            eprintln!("note: {who}: SO_BUSY_POLL at 50 µs refused ({e}). Before kernel 6.4, above \
+                       net.core.busy_read (here {floor}) it needs CAP_NET_ADMIN: run as root, or have root set \
                        `sysctl -w net.core.busy_read=50`. This run measures --spin.");
             false
         }

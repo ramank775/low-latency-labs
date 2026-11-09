@@ -52,11 +52,11 @@ pub fn spin_feed(sock: &std::net::UdpSocket, mut handle: impl FnMut(&[u8]), mut 
 }
 
 /// SO_BUSY_POLL at 50 µs: an empty recv runs the driver's poll itself, on this
-/// core. Kernels that check refuse it with EPERM above net.core.busy_read (0 by
+/// core. Kernels before 6.4 refuse it with EPERM above net.core.busy_read (0 by
 /// default) without CAP_NET_ADMIN; `sys::busy_poll_or_say` turns that into a
-/// message. (The reference VM's 6.18 kernel grants it to anyone.)
+/// message. Since 6.4 anyone may set it.
 pub fn set_busy_poll(sock: &impl AsRawFd) -> std::io::Result<()> {
-    let usecs: libc::c_int = 50; // above net.core.busy_read needs CAP_NET_ADMIN
+    let usecs: libc::c_int = 50; // before 6.4, above net.core.busy_read needs CAP_NET_ADMIN
     // SAFETY: the pointer and length describe `usecs`, a live c_int, for the call's duration.
     let rc = unsafe {
         libc::setsockopt(

@@ -81,7 +81,7 @@ pub fn strategy<B: NewBook, Q: QueueRx>(mut rx: Q,           // data-structures 
         run.log.push(b.seq[n - 1], handler.book.top(), run.quoter.resting); // this chapter: decisions file
         for i in 0..n {                                      // this chapter: records, after t3
             if b.seq[i] < run.warm_seq { continue; }         // this chapter: warm-up stays out
-            let total = run.ns(t3, b.t0[i]);                 // this chapter: wire to decision, ns
+            let total = run.ns(t3, b.t0[i]);                 // this chapter: handoff to decision, ns
             h.total.saturating_record(total);                // this chapter: clamps, never allocates
             h.worst.offer(total, b.seq[i]);                  // this chapter: keep the slow ones' seqs
             #[cfg(feature = "stages")] {                     // this chapter: the breakdown build only

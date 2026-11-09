@@ -62,8 +62,8 @@ fn main() {
               25-40 reference ticks apart, 8-12 ns, so p50 and p99 sit there in all three runs and do not move.");
     println!("Predict first, {mode} (the chapter's prediction): {}", match mode {
         "unpinned" => "the tick, device interrupts, the odd slice given to another process and migrations: \
-                       hundreds to thousands of gaps over 1 µs per second, p99.99 possibly in the microseconds, \
-                       max hundreds of microseconds to milliseconds",
+                       hundreds to thousands of gaps over 1 µs per second, too few to move the p99.99, which \
+                       needs more than 10,000, max hundreds of microseconds to milliseconds",
         "pinned" => "migrations go; the tick stays: 250-1,000 gaps a second of 1-5 µs, matching the LOC delta, \
                      and a max of tens of microseconds when a kworker runs",
         _ => "gaps over 1 µs fall to single digits per second (the residual interrupts and little else) and the max \

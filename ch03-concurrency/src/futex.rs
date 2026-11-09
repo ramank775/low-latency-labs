@@ -17,6 +17,9 @@ pub fn lock(state: &AtomicU32) {
         if state.load(Relaxed) != LOCKED { break; }
         std::hint::spin_loop();
     }
+    if state.compare_exchange(UNLOCKED, LOCKED, Acquire, Relaxed).is_ok() {
+        return; // freed during the spin: take it without marking it contended
+    }
     while state.swap(CONTENDED, Acquire) != UNLOCKED {
         futex_wait(state, CONTENDED); // system call: sleep while the word is 2
     }

@@ -459,14 +459,19 @@ impl<B: Book> FeedHandler<B> {
 
     /// Returns the new top when it changed and can be trusted.
     pub fn on_update(&mut self, u: Update) -> Option<Top> {
+        if u.qty < 0 {                                   // a bad quantity: never applied, never held
+            self.state = BookState::Stale;
+            self.buffer.clear();
+            return None;
+        }
         if let BookState::Live = self.state {
             if u.seq < self.next_seq { return None; }    // a repeat: already applied
-            if u.seq == self.next_seq && u.qty >= 0 {
+            if u.seq == self.next_seq {
                 self.next_seq = u.seq + 1;
                 let changed = self.book.apply(&u);
                 if !crossed(&self.book) { return changed.then(|| self.book.top()); }
             }
-            self.state = BookState::Stale;               // gap, bad quantity or cross
+            self.state = BookState::Stale;               // gap or cross
             self.buffer.clear();
         }
         if self.buffer.len() == self.buffer.capacity() { // resync too slow: start again
@@ -671,6 +676,9 @@ mod tests {
         let mut h = live(TreeBook::default(), 1);
         assert_eq!(h.on_update(up(1, Side::Bid, MID, -1)), None);
         assert_eq!(h.state, BookState::Stale);
+        h.on_update(up(2, Side::Bid, MID, 5));
+        assert_eq!(h.on_update(up(3, Side::Bid, MID, -1)), None);
+        assert!(h.buffer.is_empty(), "a bad quantity is never held for the replay");
     }
 
     #[test]
