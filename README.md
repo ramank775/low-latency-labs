@@ -40,7 +40,8 @@ overwriting the other's binaries.
 
 ```text
 Cargo.toml            the workspace; release profile: debug = 1, lto = "thin", codegen-units = 1
-.cargo/config.toml    -C force-frame-pointers=yes for every crate, so perf can walk stacks
+.cargo/config.toml    -C force-frame-pointers=yes for every crate, so perf can walk stacks; on x86-64
+                      also -x86-branches-within-32B-boundaries, so loop speed does not hang on layout
 rustfmt.toml          formatting off: the code keeps the chapters' printed layout, line for line
 ```
 

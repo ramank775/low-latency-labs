@@ -2,3 +2,11 @@
 # strategy thread's stack cheaply; costs 1-3% of speed.
 [build]
 rustflags = ["-C", "force-frame-pointers=yes"]
+
+# On x86-64, also pad jumps clear of 32-byte boundaries. Skylake-family cores with the
+# JCC-erratum microcode keep any 32-byte block holding a jump that crosses or ends on a
+# boundary out of the micro-op cache, so a hot loop's speed would depend on where the
+# linker happened to put it (Lab 1.2's sorted loop: 42 or 69 ms; 56 ms padded).
+# Cargo uses this section instead of [build] on x86-64, so it repeats the frame pointers.
+[target.'cfg(target_arch = "x86_64")']
+rustflags = ["-C", "force-frame-pointers=yes", "-C", "llvm-args=-x86-branches-within-32B-boundaries"]

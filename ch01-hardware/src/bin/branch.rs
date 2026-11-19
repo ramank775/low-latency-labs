@@ -76,12 +76,15 @@ fn main() {
 
     predict(&format!(
         "on random bytes the condition is true for 127 of 256 values, close to a coin flip: about 50 \
-         million mispredicts per 100 MB pass at an effective 27 cycles (the 15-20-cycle refill and the \
-         work lost around it), about 0.35 s at 4 GHz, plus about 70 ms of basic work, three cycles a \
-         byte. Sorted: the predictor fails only at the boundary, about 70 ms. Branchless never \
-         mispredicts: about the same or a little less, and less again if vectorised. So unsorted-branchy \
-         4.5-9x slower than either, about 50 million branch misses against near zero, IPC about 0.5 \
-         against 2.5-3.{}",
+         million mispredicts per 100 MB pass at an effective 24 cycles (the 15-20-cycle refill and the \
+         work lost around it), about 0.3 s at 4 GHz, plus 45-70 ms of basic work, two to three cycles a \
+         byte. Sorted: the predictor fails only at the boundary, 45-70 ms, set by where the loop lands \
+         (a jump across a 32-byte boundary keeps it out of the micro-op cache on Skylake-family cores; \
+         compare idq.dsb_uops with idq.mite_uops; this repository pads its jumps clear, 56-59 ms here). Branchless never mispredicts, but its select costs \
+         more per byte than a predicted branch: about 60 ms, a little less if vectorised. So \
+         unsorted-branchy 4.5-9x slower than either, about 50 million branch misses against near zero, \
+         IPC about 0.5 against 2.5 or more. Keep this core's hyperthread sibling idle: a busy one \
+         doubles the branchy loop's time.{}",
         if size_mb == 100 { String::new() } else { format!(" (at --size {size_mb}: {size_mb}/100 of those times and misses)") }));
 
     let pinned = pin_line(core);

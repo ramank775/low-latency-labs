@@ -75,10 +75,11 @@ fn main() {
     println!("wake: two threads pass a token {} times: {}{}{} (Lab 2.4)", sep(iters), names.join(", "),
              if c0 { ", --c0" } else { "" }, slack.map_or(String::new(), |s| format!(", --timerslack {s}")));
     println!("Predict first (the chapter's prediction, before you measure): spin moves one cache line each way, \
-              25-40 ns a hop on a client part's ring and 50-80 ns on a server's mesh, a round trip of 50-80 ns or \
-              100-160 ns. Park pays a futex, the reschedule interrupt, the far core's \
-              C-state exit and a scheduler pass: 3-10 µs a hop with C-states capped, 6-20 µs a round trip; without --c0 \
-              the p99 shows 50-150 µs hops out of C6. Sleep is bounded below by timer slack, 50-60 µs a hop, so a round \
+              25-40 ns a hop on a client part's ring and 50-80 ns on a server's mesh, and up to a pause more (about \
+              35 ns at 4 GHz), a round trip of 50-150 ns or 100-230 ns. Park pays a futex, the reschedule interrupt, the far core's \
+              C-state exit and a scheduler pass: 2-10 µs a hop, 4-20 µs a round trip; without --c0 the far core may sleep \
+              deeper, but a token back within microseconds rarely earns C6, so its 50-150 µs exits show beyond the \
+              p99.9, not in the p99. Sleep is bounded below by timer slack, 50-60 µs a hop, so a round \
               trip above 100 µs whatever --c0 does; with --timerslack 1 the hop drops to a few microseconds and stops there.");
     print_platform();
 

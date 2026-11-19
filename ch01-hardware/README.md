@@ -76,8 +76,8 @@ expected misses per pass. To read the assembly, as the lab's pitfall asks:
 `objdump -d -C -M intel --no-show-raw-insn target/release/branch | grep -A30 'sum_branchy>:'`.
 The release build here shows `jbe` per byte in `sum_branchy`, `cmovb` in
 `sum_branchless` and SSE2 (`pminub`, `paddq`) in `sum_vector`; build with
-`RUSTFLAGS="-C force-frame-pointers=yes -C target-cpu=native"` for AVX2
-(an explicit `RUSTFLAGS` replaces `.cargo/config.toml`'s, so repeat the frame pointers).
+`RUSTFLAGS="-C force-frame-pointers=yes -C llvm-args=-x86-branches-within-32B-boundaries -C target-cpu=native"`
+for AVX2 (an explicit `RUSTFLAGS` replaces `.cargo/config.toml`'s, so repeat its two flags).
 
 ### Choices the chapter leaves open
 
